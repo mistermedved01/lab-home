@@ -127,6 +127,7 @@ set -e
 
 sudo mkdir -p /etc/ansible
 
+sleep 60
 # Создаем ansible.cfg с помощью echo вместо вложенного heredoc
 echo "[defaults]
 inventory = /etc/ansible/inventory.yaml

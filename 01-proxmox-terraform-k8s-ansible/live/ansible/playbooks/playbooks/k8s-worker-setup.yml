@@ -8,9 +8,6 @@
     join_command_file: "{{ playbook_dir }}/.kubeadm-join-command"
 
   tasks:
-    - name: Включение common-setup
-      include_tasks: "{{ playbook_dir }}/common-setup.yml"
-
     - name: Проверка, не присоединен ли уже worker
       stat:
         path: /etc/kubernetes/kubelet.conf
@@ -39,7 +36,7 @@
 
     - name: Получение IP адреса control plane из inventory
       set_fact:
-        control_plane_ip: "{{ hostvars[groups['kube_control_plane'][0]]['ansible_default_ipv4']['address'] }}"
+        control_plane_ip: "{{ hostvars[groups['kube_control_plane'][0]]['ansible_host'] }}"
       when: groups['kube_control_plane'] | length > 0
 
     - name: Ожидание доступности control plane

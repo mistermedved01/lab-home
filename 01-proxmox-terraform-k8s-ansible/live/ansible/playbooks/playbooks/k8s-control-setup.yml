@@ -9,9 +9,6 @@
     kubeconfig_path: "/home/{{ ansible_user }}/.kube/config"
 
   tasks:
-    - name: Включение common-setup
-      include_tasks: "{{ playbook_dir }}/common-setup.yml"
-
     - name: Проверка, не инициализирован ли уже кластер
       stat:
         path: /etc/kubernetes/admin.conf

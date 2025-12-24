@@ -1,10 +1,10 @@
 ---
 # Версия Kubernetes
-kubernetes_version: "1.28.0"
+kubernetes_version: "1.30.0"
 
 # Kubernetes apt repository
-kubernetes_apt_key: "https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key"
-kubernetes_apt_repo: "deb https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /"
+kubernetes_apt_key: "https://pkgs.k8s.io/core:/stable:/v1.30/deb/Release.key"
+kubernetes_apt_repo: "deb https://pkgs.k8s.io/core:/stable:/v1.30/deb/ /"
 
 # Pod network CIDR (для Flannel)
 pod_network_cidr: "10.244.0.0/16"

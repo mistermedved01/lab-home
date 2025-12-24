@@ -18,6 +18,25 @@
         msg: "kubeconfig не найден. Сначала выполните k8s-control-setup.yml"
       when: not kubeconfig_file.stat.exists
 
+    - name: Получение IP адреса control plane ноды
+      set_fact:
+        control_plane_ip: "{{ ansible_default_ipv4.address }}"
+
+    - name: Ожидание готовности API сервера Kubernetes
+      wait_for:
+        host: "{{ control_plane_ip }}"
+        port: 6443
+        delay: 10
+        timeout: 300
+
+    - name: Проверка доступности API сервера через kubectl
+      command: kubectl get nodes --kubeconfig={{ kubeconfig_path }}
+      register: api_check
+      until: api_check.rc == 0
+      retries: 30
+      delay: 10
+      changed_when: false
+
     - name: Проверка, установлен ли уже CNI
       command: kubectl get daemonset -n kube-flannel kube-flannel-ds --kubeconfig={{ kubeconfig_path }}
       register: flannel_check
@@ -25,10 +44,10 @@
       changed_when: false
 
     - name: Применение Flannel CNI манифеста
-      command: kubectl apply -f {{ cni_manifest_url }} --kubeconfig={{ kubeconfig_path }}
+      command: kubectl apply -f {{ cni_manifest_url }} --kubeconfig={{ kubeconfig_path }} --validate=false
       register: flannel_apply
       when: flannel_check.rc != 0
-      changed_when: "'created' in flannel_apply.stdout or 'configured' in flannel_apply.stdout"
+      changed_when: "'created' in flannel_apply.stdout or 'configured' in flannel_apply.stdout or flannel_apply.rc == 0"
 
     - name: Ожидание готовности Flannel pods
       command: >
