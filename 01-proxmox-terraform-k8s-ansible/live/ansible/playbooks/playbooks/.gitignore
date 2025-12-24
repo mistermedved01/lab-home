@@ -1,0 +1,3 @@
+# Файлы, создаваемые в процессе выполнения playbooks
+.kubeadm-join-command
+

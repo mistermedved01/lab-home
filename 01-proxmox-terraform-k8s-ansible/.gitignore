@@ -1,0 +1,46 @@
+# Terraform
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+*.tfplan
+
+# Sensitive files
+*.tfvars
+!terraform.tfvars.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# SSH keys
+**/keys/*
+!**/keys/.gitkeep
+
+# Ansible generated files
+**/ansible/inventory.yaml
+
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# Logs
+*.log
+

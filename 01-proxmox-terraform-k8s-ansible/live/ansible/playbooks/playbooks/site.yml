@@ -1,0 +1,12 @@
+---
+# Master playbook для полной установки Kubernetes кластера
+# Выполняет все playbooks в правильном порядке
+
+- import_playbook: common-setup.yml
+
+- import_playbook: k8s-control-setup.yml
+
+- import_playbook: cni-setup.yml
+
+- import_playbook: k8s-worker-setup.yml
+

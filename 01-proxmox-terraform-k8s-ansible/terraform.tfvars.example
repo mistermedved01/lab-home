@@ -1,0 +1,64 @@
+# Пример конфигурации terraform.tfvars
+# Скопируйте этот файл в terraform.tfvars и заполните своими значениями
+
+# ============================================
+# ПОДКЛЮЧЕНИЕ К PROXMOX
+# ============================================
+proxmox_endpoint  = "https://192.168.40.143:8006/"
+proxmox_api_token = "terraform@pve!terraform-token=YOUR_TOKEN_HERE"
+
+node_name      = "pve-node-01"
+datastore_id   = "local-lvm"
+network_bridge = "vmbr0"
+
+# ============================================
+# СЕТЕВЫЕ НАСТРОЙКИ
+# ============================================
+gateway_ip            = "192.168.40.143"
+template_vm_id        = 9000
+snippets_datastore_id = "local"
+
+# ============================================
+# SSH КЛЮЧИ
+# ============================================
+# Получить: cat ~/.ssh/id_ed25519.pub
+ssh_public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... your_email@example.com"
+
+# ============================================
+# СПИСОК ВИРТУАЛЬНЫХ МАШИН
+# ============================================
+vm_list = {
+  ansible_control-01 = {
+    vm_hostname     = "ansible-control-01"
+    vm_ip           = "192.168.40.144"
+    vm_id           = 1000
+    vm_cores        = 2
+    vm_memory       = 2048
+    vm_disk_size    = 80
+    cloud_init_file = "ansible-control.yaml.tftpl"
+    role            = "ansible"
+  }
+
+  k8s_control-01 = {
+    vm_hostname     = "k8s-control-01"
+    vm_ip           = "192.168.40.145"
+    vm_id           = 1001
+    vm_cores        = 2
+    vm_memory       = 2048
+    vm_disk_size    = 40
+    cloud_init_file = "k8s-control.yaml.tftpl"
+    role            = "k8s_control"
+  }
+
+  k8s_worker-01 = {
+    vm_hostname     = "k8s-worker-01"
+    vm_ip           = "192.168.40.146"
+    vm_id           = 1002
+    vm_cores        = 2
+    vm_memory       = 2048
+    vm_disk_size    = 40
+    cloud_init_file = "k8s-worker.yaml.tftpl"
+    role            = "k8s_worker"
+  }
+}
+

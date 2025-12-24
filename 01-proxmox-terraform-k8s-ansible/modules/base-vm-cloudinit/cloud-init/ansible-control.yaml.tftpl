@@ -1,0 +1,45 @@
+#cloud-config
+hostname: ${hostname}
+manage_etc_hosts: true
+
+users:
+  - name: ${vm_user}
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    ssh_authorized_keys:
+%{ for key in ssh_authorized_keys ~}
+      - ${key}
+%{ endfor ~}
+
+package_update: true
+package_upgrade: false
+
+packages:
+  - software-properties-common
+
+runcmd:
+  - |
+    exec > /home/${vm_user}/ansible-install.log 2>&1
+    set -x
+
+    echo "=== START $(date) ==="
+   
+    # Установка в неинтерактивном режиме
+    export DEBIAN_FRONTEND=noninteractive
+
+    add-apt-repository --yes ppa:ansible/ansible
+    apt-get update
+
+    apt-cache madison ansible
+
+    # Установка в неинтерактивном режиме с автоматическим принятием решений
+    # --force-confnew - использовать версию из пакета (перезаписать существующий файл)
+    apt-get install -y -o Dpkg::Options::="--force-confnew" ansible=${ansible_version}
+    
+    apt-mark hold ansible
+
+    ansible --version
+
+    echo "=== END $(date) ==="
+
+    chown ${vm_user}:${vm_user} /home/${vm_user}/ansible-install.log

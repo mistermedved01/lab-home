@@ -1,0 +1,17 @@
+#cloud-config
+hostname: ${hostname}
+
+users:
+  - name: ${vm_user}
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    ssh_authorized_keys:
+%{ for key in ssh_authorized_keys ~}
+      - ${key}
+%{ endfor ~}
+
+ssh_pwauth: false
+disable_root: true
+manage_etc_hosts: true
+
+final_message: "Cloud-init completed for ${hostname}"

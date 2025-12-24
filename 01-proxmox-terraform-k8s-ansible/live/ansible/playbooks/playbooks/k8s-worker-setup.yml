@@ -1,0 +1,70 @@
+---
+- name: Присоединение worker nodes к Kubernetes кластеру
+  hosts: kube_node
+  become: yes
+  gather_facts: yes
+
+  vars:
+    join_command_file: "{{ playbook_dir }}/.kubeadm-join-command"
+
+  tasks:
+    - name: Включение common-setup
+      include_tasks: "{{ playbook_dir }}/common-setup.yml"
+
+    - name: Проверка, не присоединен ли уже worker
+      stat:
+        path: /etc/kubernetes/kubelet.conf
+      register: kubelet_conf_exists
+
+    - name: Проверка существования join command файла
+      stat:
+        path: "{{ join_command_file }}"
+      register: join_file
+      delegate_to: localhost
+
+    - name: Ошибка, если join command файл не найден
+      fail:
+        msg: "Join command файл не найден. Сначала выполните k8s-control-setup.yml"
+      when: not join_file.stat.exists
+
+    - name: Чтение join command из файла
+      slurp:
+        src: "{{ join_command_file }}"
+      register: join_command_content
+      delegate_to: localhost
+
+    - name: Извлечение join command
+      set_fact:
+        join_command: "{{ join_command_content.content | b64decode | trim }}"
+
+    - name: Получение IP адреса control plane из inventory
+      set_fact:
+        control_plane_ip: "{{ hostvars[groups['kube_control_plane'][0]]['ansible_default_ipv4']['address'] }}"
+      when: groups['kube_control_plane'] | length > 0
+
+    - name: Ожидание доступности control plane
+      wait_for:
+        host: "{{ control_plane_ip }}"
+        port: 6443
+        delay: 10
+        timeout: 300
+      when: groups['kube_control_plane'] | length > 0
+
+    - name: Присоединение worker к кластеру
+      command: "{{ join_command }} --ignore-preflight-errors=Swap"
+      register: kubeadm_join
+      when: not kubelet_conf_exists.stat.exists
+      changed_when: "'This node has joined the cluster' in kubeadm_join.stdout"
+
+    - name: Проверка успешного присоединения
+      wait_for:
+        path: /etc/kubernetes/kubelet.conf
+        state: present
+      when: not kubelet_conf_exists.stat.exists
+
+    - name: Вывод информации о присоединении
+      debug:
+        msg:
+          - "Worker node {{ inventory_hostname }} успешно присоединен к кластеру!"
+          - "Проверьте статус через: kubectl get nodes"
+

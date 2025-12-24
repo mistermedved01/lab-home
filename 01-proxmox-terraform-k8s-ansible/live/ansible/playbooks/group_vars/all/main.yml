@@ -1,0 +1,23 @@
+---
+# Версия Kubernetes
+kubernetes_version: "1.28.0"
+
+# Kubernetes apt repository
+kubernetes_apt_key: "https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key"
+kubernetes_apt_repo: "deb https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /"
+
+# Pod network CIDR (для Flannel)
+pod_network_cidr: "10.244.0.0/16"
+
+# CNI плагин
+cni_plugin: "flannel"
+cni_manifest_url: "https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml"
+
+# Версия containerd
+containerd_version: "1.7"
+
+# Ansible пользователь
+# Примечание: это значение будет переопределено из inventory, который генерируется Terraform
+# с использованием переменной vm_user
+ansible_user: ubuntu
+

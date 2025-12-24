@@ -1,0 +1,5 @@
+---
+# Настройки control plane
+service_cidr: "10.96.0.0/12"
+cluster_dns: "10.96.0.10"
+
