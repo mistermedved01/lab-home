@@ -263,11 +263,20 @@
       when: api_check_before_pods.rc == 0
 
     - name: Декодирование пароля администратора
-      command: echo "{{ admin_secret_password.stdout }}" | base64 -d
+      shell: |
+        echo "{{ admin_secret_password.stdout }}" | base64 -d
       register: admin_password_decoded
       failed_when: false
       changed_when: false
       when: admin_secret_password.stdout is defined and admin_secret_password.stdout != ""
+
+    - name: Установка декодированного пароля в переменную
+      set_fact:
+        admin_password: "{{ admin_password_decoded.stdout_lines[0] | default(admin_password_decoded.stdout | default('')) }}"
+      when: 
+        - admin_secret_password.stdout is defined 
+        - admin_secret_password.stdout != ""
+        - admin_password_decoded.stdout is defined
 
     - name: Вывод пароля администратора
       debug:
@@ -276,13 +285,21 @@
           - "Данные для входа в ArgoCD:"
           - "=========================================="
           - "Логин: admin"
-          - "Пароль: {{ admin_password_decoded.stdout }}"
+          - "Пароль: {{ admin_password }}"
+          - ""
+          - "Для доступа через ingress:"
+          - "  http://argocd.example.com:30080"
           - ""
           - "Для доступа через port-forward:"
           - "  kubectl port-forward svc/argocd-server -n {{ helm_namespace }} 8080:443"
           - "  Затем откройте: https://localhost:8080"
           - "=========================================="
-      when: api_check_before_pods.rc == 0 and admin_password_decoded.stdout is defined and admin_password_decoded.stdout != ""
+      when: 
+        - api_check_before_pods.rc == 0 
+        - admin_secret_password.stdout is defined 
+        - admin_secret_password.stdout != ""
+        - admin_password is defined
+        - admin_password != ""
 
     - name: Предупреждение, если пароль еще не создан
       debug:

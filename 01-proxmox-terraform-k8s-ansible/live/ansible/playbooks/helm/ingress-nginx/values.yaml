@@ -9,6 +9,10 @@ controller:
       https: 30443
     annotations: {}
 
+  # Включаем SSL passthrough для ArgoCD и других приложений
+  extraArgs:
+    enable-ssl-passthrough: ""
+
   # Размещение на worker нодах
   # Вариант 1: По hostname (работает, но не гибко - только для конкретной ноды)
   # nodeSelector:

@@ -10,13 +10,15 @@ server:
   ingress:
     enabled: true
     ingressClassName: nginx
-    # Укажите ваш домен
-    # hosts:
-    #   - argocd.example.com
-    # tls:
-    #   - secretName: argocd-tls
-    #     hosts:
-    #       - argocd.example.com
+    # Домен для доступа к ArgoCD
+    hosts:
+      - argocd.example.com
+    # Аннотации для работы ArgoCD через ingress-nginx (HTTP режим)
+    annotations:
+      # Отключаем SSL redirect для работы через HTTP
+      nginx.ingress.kubernetes.io/ssl-redirect: "false"
+      # Используем HTTP для backend (ArgoCD будет работать в insecure режиме)
+      nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
 
   # Ресурсы
   resources:
@@ -71,4 +73,9 @@ redis:
     limits:
       cpu: 200m
       memory: 128Mi
+
+# Включаем insecure режим для работы через HTTP (только для тестовой среды!)
+configs:
+  params:
+    server.insecure: "true"
 
