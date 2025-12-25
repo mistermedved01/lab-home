@@ -5,30 +5,29 @@
   gather_facts: yes
 
   vars:
-    join_command_file: "{{ playbook_dir }}/.kubeadm-join-command"
-    kubeconfig_path: "/home/{{ ansible_user }}/.kube/config"
+    kubeconfig_user_path: "/home/{{ ansible_user }}/.kube/config"
 
   tasks:
     - name: Проверка, не инициализирован ли уже кластер
       stat:
         path: /etc/kubernetes/admin.conf
-      register: kubeconfig_exists
+      register: admin_conf
 
-    - name: Получение IP адреса control plane ноды
+    - name: Получение IP control plane
       set_fact:
         control_plane_ip: "{{ ansible_default_ipv4.address }}"
+      when: not admin_conf.stat.exists
 
-    - name: Инициализация кластера через kubeadm
+    - name: Инициализация control plane через kubeadm
       command: >
         kubeadm init
         --pod-network-cidr={{ pod_network_cidr }}
         --apiserver-advertise-address={{ control_plane_ip }}
-        --ignore-preflight-errors=Swap
-      register: kubeadm_init
-      when: not kubeconfig_exists.stat.exists
-      changed_when: "'Your Kubernetes control-plane has initialized' in kubeadm_init.stdout"
+      args:
+        creates: /etc/kubernetes/admin.conf
+      when: not admin_conf.stat.exists
 
-    - name: Создание директории .kube
+    - name: Создание директории .kube для пользователя
       file:
         path: "/home/{{ ansible_user }}/.kube"
         state: directory
@@ -36,56 +35,44 @@
         group: "{{ ansible_user }}"
         mode: '0755'
 
-    - name: Копирование kubeconfig для пользователя
+    - name: Копирование kubeconfig пользователю
       copy:
         src: /etc/kubernetes/admin.conf
-        dest: "{{ kubeconfig_path }}"
-        owner: "{{ ansible_user }}"
-        group: "{{ ansible_user }}"
-        mode: '0644'
+        dest: "{{ kubeconfig_user_path }}"
         remote_src: yes
-
-    - name: Установка прав на kubeconfig
-      file:
-        path: "{{ kubeconfig_path }}"
-        mode: '0644'
         owner: "{{ ansible_user }}"
         group: "{{ ansible_user }}"
+        mode: '0644'
 
-    - name: Получение join command
-      command: kubeadm token create --print-join-command
-      register: join_command
-      changed_when: false
-      when: kubeconfig_exists.stat.exists or kubeadm_init.changed
-
-    - name: Сохранение join command в файл
-      copy:
-        content: "{{ join_command.stdout }}"
-        dest: "{{ join_command_file }}"
-        mode: '0600'
-      delegate_to: localhost
-      when: kubeconfig_exists.stat.exists or kubeadm_init.changed
-
-    - name: Ожидание готовности control plane
+    - name: Ожидание доступности API сервера
       wait_for:
         host: "{{ control_plane_ip }}"
         port: 6443
-        delay: 10
         timeout: 300
-      when: not kubeconfig_exists.stat.exists
 
-    - name: Проверка готовности control plane через kubectl
-      command: kubectl get nodes --kubeconfig={{ kubeconfig_path }}
+    - name: Проверка доступа к кластеру
+      command: kubectl get nodes --kubeconfig={{ kubeconfig_user_path }}
       register: kubectl_nodes
-      until: kubectl_nodes.rc == 0
-      retries: 30
+      retries: 20
       delay: 10
+      until: kubectl_nodes.rc == 0
       changed_when: false
 
-    - name: Вывод информации о кластере
+    - name: Получение join command для worker нод
+      command: kubeadm token create --print-join-command --kubeconfig={{ kubeconfig_user_path }}
+      register: join_command
+      changed_when: false
+
+    - name: Сохранение join command локально
+      copy:
+        content: "{{ join_command.stdout }}"
+        dest: "{{ playbook_dir }}/.kubeadm-join-command"
+        mode: '0600'
+      delegate_to: localhost
+
+    - name: Итог
       debug:
         msg:
-          - "Kubernetes control plane инициализирован успешно!"
-          - "Join command сохранен в: {{ join_command_file }}"
-          - "Для присоединения worker nodes используйте: ansible-playbook k8s-worker-setup.yml"
-
+          - "Control plane инициализирован"
+          - "Join command сохранён в {{ playbook_dir }}/.kubeadm-join-command"
+          - "Далее можно ставить CNI и подключать worker ноды"

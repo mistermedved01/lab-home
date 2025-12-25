@@ -1,0 +1,74 @@
+# ArgoCD Helm Chart Values
+# Документация: https://github.com/argoproj/argo-helm/tree/main/charts/argo-cd
+
+# Настройки сервера ArgoCD
+server:
+  # Количество реплик
+  replicas: 2
+  
+  # Настройки ingress (требует ingress-nginx)
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    # Укажите ваш домен
+    # hosts:
+    #   - argocd.example.com
+    # tls:
+    #   - secretName: argocd-tls
+    #     hosts:
+    #       - argocd.example.com
+
+  # Ресурсы
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+# Настройки контроллера
+controller:
+  replicas: 2
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+# Настройки repo server
+repoServer:
+  replicas: 2
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+# Настройки applicationSet controller
+applicationSet:
+  enabled: true
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+# Настройки Redis
+redis:
+  enabled: true
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+

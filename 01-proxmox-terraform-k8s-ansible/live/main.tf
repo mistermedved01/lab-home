@@ -48,6 +48,7 @@ resource "null_resource" "push_ansible_files" {
     vm_ready          = join(",", keys(var.vm_list))
     ansible_host      = local.ansible_host_ip
     playbooks_dir     = sha256(join("", [for f in fileset("${path.root}/ansible/playbooks/playbooks", "**") : filesha256("${path.root}/ansible/playbooks/playbooks/${f}")]))
+    helm_dir          = sha256(join("", [for f in fileset("${path.root}/ansible/playbooks/helm", "**") : filesha256("${path.root}/ansible/playbooks/helm/${f}")]))
   }
 
   provisioner "local-exec" {

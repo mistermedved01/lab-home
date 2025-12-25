@@ -1,0 +1,58 @@
+controller:
+  # Тип сервиса
+  service:
+    type: LoadBalancer
+    annotations:
+      # Для Proxmox/MetalLB (если используется)
+      # metallb.universe.tf/address-pool: default
+    # Если нужен NodePort вместо LoadBalancer
+    # type: NodePort
+    # nodePorts:
+    #   http: 30080
+    #   https: 30443
+
+  # Количество реплик (уменьшено для небольших кластеров)
+  replicaCount: 1
+
+  # Размещение на worker нодах (исключаем control plane)
+  nodeSelector: {}
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: DoesNotExist
+              - key: node-role.kubernetes.io/master
+                operator: DoesNotExist
+  
+  tolerations: []
+
+  # Ресурсы (уменьшены для небольших кластеров)
+  resources:
+    requests:
+      cpu: 100m
+      memory: 90Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+  # Настройки для production (отключено для небольших кластеров)
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 2
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+
+  # Метрики для мониторинга
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: false  # Включите, если используете Prometheus Operator
+
+  # Pod Disruption Budget
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+

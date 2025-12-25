@@ -1,0 +1,5 @@
+# Эта директория будет содержать ArgoCD Projects
+# Примеры:
+# - platform-project.yaml
+# - apps-project.yaml
+

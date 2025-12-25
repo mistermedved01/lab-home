@@ -11,6 +11,9 @@
 3. **`k8s-control-setup.yml`** - Инициализация Kubernetes control plane
 4. **`cni-setup.yml`** - Установка CNI плагина (Flannel)
 5. **`k8s-worker-setup.yml`** - Присоединение worker nodes к кластеру
+6. **`helm-install.yml`** - Установка Helm 4.0.0 на control plane ноде
+7. **`ingress-nginx-install.yml`** - Установка ingress-nginx через Helm
+8. **`argocd-install.yml`** - Установка ArgoCD через Helm
 
 ## Подготовка
 
@@ -51,6 +54,11 @@ ansible-playbook playbooks/site.yml
 2. Инициализацию control plane (`k8s-control-setup.yml`)
 3. Установку CNI (`cni-setup.yml`)
 4. Присоединение worker nodes (`k8s-worker-setup.yml`)
+5. Установку Helm (`helm-install.yml`)
+6. Установку ingress-nginx (`ingress-nginx-install.yml`)
+7. Установку ArgoCD (`argocd-install.yml`)
+
+**Примечание:** После установки Helm, Ansible больше не используется. Дальнейшая установка компонентов (например, ingress-nginx-controller) выполняется через Helm вручную. См. раздел "Установка ingress-nginx-controller" ниже.
 
 ### Вариант 2: Пошаговая установка
 
@@ -79,6 +87,118 @@ ansible-playbook playbooks/cni-setup.yml
 ansible-playbook playbooks/k8s-worker-setup.yml
 ```
 
+#### Шаг 5: Установка Helm
+```bash
+ansible-playbook playbooks/helm-install.yml
+```
+
+#### Шаг 6: Установка ingress-nginx
+```bash
+ansible-playbook playbooks/ingress-nginx-install.yml
+```
+
+#### Шаг 7: Установка ArgoCD
+```bash
+ansible-playbook playbooks/argocd-install.yml
+```
+
+**Примечание:** После установки ArgoCD, дальнейшая работа с приложениями выполняется через ArgoCD Applications (см. `03-argocd-applications/`).
+
+## Установка ingress-nginx-controller
+
+После установки Helm, ingress-nginx-controller устанавливается вручную через Helm. Доступны следующие варианты:
+
+### Вариант 1: Установка через Helm напрямую (рекомендуется)
+
+Подключитесь к control plane ноде и выполните:
+
+```bash
+# Подключение к control plane ноде
+ssh -i ~/.ssh/id_ed25519 ubuntu@<K8S_CONTROL_IP>
+
+# Добавление официального Helm репозитория ingress-nginx
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm repo update
+
+# Установка ingress-nginx-controller
+helm install ingress-nginx ingress-nginx/ingress-nginx \
+  --namespace ingress-nginx \
+  --create-namespace \
+  --set controller.service.type=LoadBalancer
+
+# Проверка установки
+kubectl get pods -n ingress-nginx
+kubectl get svc -n ingress-nginx
+```
+
+### Вариант 2: Установка с кастомными параметрами
+
+Создайте файл `ingress-nginx-values.yaml` с нужными настройками:
+
+```yaml
+controller:
+  service:
+    type: LoadBalancer
+    annotations:
+      # Добавьте аннотации для вашего провайдера LoadBalancer
+  replicaCount: 2
+  resources:
+    requests:
+      cpu: 100m
+      memory: 90Mi
+```
+
+Затем установите:
+
+```bash
+helm install ingress-nginx ingress-nginx/ingress-nginx \
+  --namespace ingress-nginx \
+  --create-namespace \
+  -f ingress-nginx-values.yaml
+```
+
+### Вариант 3: Установка через скрипт
+
+Создайте скрипт `install-ingress-nginx.sh` на control plane ноде:
+
+```bash
+#!/bin/bash
+set -e
+
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm repo update
+
+helm install ingress-nginx ingress-nginx/ingress-nginx \
+  --namespace ingress-nginx \
+  --create-namespace \
+  --set controller.service.type=LoadBalancer
+
+echo "Ожидание готовности ingress-nginx..."
+kubectl wait --namespace ingress-nginx \
+  --for=condition=ready pod \
+  --selector=app.kubernetes.io/component=controller \
+  --timeout=300s
+
+kubectl get svc -n ingress-nginx
+```
+
+Сделайте скрипт исполняемым и запустите:
+
+```bash
+chmod +x install-ingress-nginx.sh
+./install-ingress-nginx.sh
+```
+
+### Вариант 4: Установка через kubectl (без Helm)
+
+Если по каким-то причинам не хотите использовать Helm:
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.11.1/deploy/static/provider/cloud/deploy.yaml
+```
+
+**Рекомендация:** Используйте Вариант 1 или Вариант 2, так как Helm упрощает управление и обновление ingress-nginx-controller.
+
 ## Проверка установки
 
 После завершения установки проверьте статус кластера:
@@ -87,6 +207,10 @@ ansible-playbook playbooks/k8s-worker-setup.yml
 # На control plane ноде
 kubectl get nodes
 kubectl get pods --all-namespaces
+
+# Проверка Helm
+helm version
+helm list --all-namespaces
 ```
 
 ## Переменные конфигурации

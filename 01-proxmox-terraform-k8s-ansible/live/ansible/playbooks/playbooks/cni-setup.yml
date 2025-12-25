@@ -1,65 +1,77 @@
 ---
-- name: Установка CNI плагина (Flannel)
+- name: Установка Flannel CNI
   hosts: kube_control_plane
   become: yes
   gather_facts: yes
 
   vars:
     kubeconfig_path: "/home/{{ ansible_user }}/.kube/config"
+    flannel_manifest_url: "https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml"
 
   tasks:
-    - name: Проверка существования kubeconfig
+    - name: Проверка kubeconfig
       stat:
         path: "{{ kubeconfig_path }}"
       register: kubeconfig_file
 
-    - name: Ошибка, если kubeconfig не найден
+    - name: Ошибка если kubeconfig не найден
       fail:
-        msg: "kubeconfig не найден. Сначала выполните k8s-control-setup.yml"
+        msg: "kubeconfig не найден. Сначала инициализируйте control plane"
       when: not kubeconfig_file.stat.exists
 
-    - name: Получение IP адреса control plane ноды
+    - name: Получение IP control plane
       set_fact:
         control_plane_ip: "{{ ansible_default_ipv4.address }}"
 
-    - name: Ожидание готовности API сервера Kubernetes
+    - name: Ожидание API сервера Kubernetes
       wait_for:
         host: "{{ control_plane_ip }}"
         port: 6443
-        delay: 10
         timeout: 300
 
-    - name: Проверка доступности API сервера через kubectl
+    - name: Проверка доступности Kubernetes API
       command: kubectl get nodes --kubeconfig={{ kubeconfig_path }}
       register: api_check
       until: api_check.rc == 0
-      retries: 30
+      retries: 20
       delay: 10
       changed_when: false
 
-    - name: Проверка, установлен ли уже CNI
+    - name: Проверка установлен ли Flannel
       command: kubectl get daemonset -n kube-flannel kube-flannel-ds --kubeconfig={{ kubeconfig_path }}
       register: flannel_check
       failed_when: false
       changed_when: false
 
-    - name: Применение Flannel CNI манифеста
-      command: kubectl apply -f {{ cni_manifest_url }} --kubeconfig={{ kubeconfig_path }} --validate=false
+    - name: Установка Flannel
+      command: kubectl apply -f {{ flannel_manifest_url }} --kubeconfig={{ kubeconfig_path }}
       register: flannel_apply
       when: flannel_check.rc != 0
-      changed_when: "'created' in flannel_apply.stdout or 'configured' in flannel_apply.stdout or flannel_apply.rc == 0"
+      changed_when: "'created' in flannel_apply.stdout or 'configured' in flannel_apply.stdout"
 
     - name: Ожидание готовности Flannel pods
       command: >
-        kubectl wait --for=condition=ready pod
+        kubectl wait
+        --for=condition=ready pod
+        -n kube-flannel
         --selector=app=flannel
-        --namespace=kube-flannel
         --timeout=300s
         --kubeconfig={{ kubeconfig_path }}
       register: flannel_wait
       until: flannel_wait.rc == 0
-      retries: 30
+      retries: 20
       delay: 10
+      changed_when: false
+      when: flannel_check.rc != 0 or flannel_apply.changed is defined
+
+    - name: Проверка статуса нод
+      command: kubectl get nodes --kubeconfig={{ kubeconfig_path }}
+      register: nodes_status
+      changed_when: false
+
+    - name: Проверка системных pod'ов
+      command: kubectl get pods -n kube-system --kubeconfig={{ kubeconfig_path }}
+      register: system_pods
       changed_when: false
 
     - name: Проверка статуса Flannel pods
@@ -67,32 +79,12 @@
       register: flannel_pods
       changed_when: false
 
-    - name: Вывод статуса Flannel
-      debug:
-        var: flannel_pods.stdout_lines
-
-    - name: Ожидание готовности CoreDNS
-      command: >
-        kubectl wait --for=condition=ready pod
-        --selector=k8s-app=kube-dns
-        --namespace=kube-system
-        --timeout=300s
-        --kubeconfig={{ kubeconfig_path }}
-      register: coredns_wait
-      until: coredns_wait.rc == 0
-      retries: 30
-      delay: 10
-      changed_when: false
-
-    - name: Проверка статуса всех системных pods
-      command: kubectl get pods --all-namespaces --kubeconfig={{ kubeconfig_path }}
-      register: all_pods
-      changed_when: false
-
-    - name: Вывод информации об установке CNI
+    - name: Результат установки Flannel
       debug:
         msg:
-          - "Flannel CNI успешно установлен!"
-          - "Проверьте статус pods: kubectl get pods --all-namespaces"
-          - "Проверьте статус nodes: kubectl get nodes"
-
+          - "Flannel установлен и работает"
+          - "Статус нод:"
+          - "{{ nodes_status.stdout }}"
+          - ""
+          - "Статус Flannel pods:"
+          - "{{ flannel_pods.stdout_lines }}"

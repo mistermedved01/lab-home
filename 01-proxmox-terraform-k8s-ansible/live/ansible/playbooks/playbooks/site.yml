@@ -10,3 +10,9 @@
 
 - import_playbook: k8s-worker-setup.yml
 
+- import_playbook: helm-install.yml
+
+- import_playbook: ingress-nginx-install.yml
+
+- import_playbook: argocd-install.yml
+

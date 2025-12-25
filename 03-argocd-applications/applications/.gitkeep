@@ -1,0 +1,5 @@
+# Эта директория будет содержать ArgoCD Applications
+# Примеры:
+# - rancher/application.yaml
+# - gitlab/application.yaml
+

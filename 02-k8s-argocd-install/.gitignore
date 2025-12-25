@@ -1,0 +1,13 @@
+# Временные файлы
+*.tmp
+*.log
+
+# Локальные конфигурации
+*.local.yaml
+*.local.yml
+
+# Секреты (если будут добавлены)
+secrets/
+*.secret.yaml
+*.secret.yml
+

@@ -101,6 +101,13 @@ copy_playbooks() {
   else
     echo "Предупреждение: директория $PLAYBOOKS_PATH/group_vars не найдена"
   fi
+  
+  if [ -d "$PLAYBOOKS_PATH/helm" ]; then
+    echo "Копирование helm values файлов..."
+    scp_cmd -r "$PLAYBOOKS_PATH/helm" "$ANSIBLE_USER@$ANSIBLE_HOST:/home/$ANSIBLE_USER/playbooks/"
+  else
+    echo "Предупреждение: директория $PLAYBOOKS_PATH/helm не найдена"
+  fi
 }
 
 wait_for_ansible() {

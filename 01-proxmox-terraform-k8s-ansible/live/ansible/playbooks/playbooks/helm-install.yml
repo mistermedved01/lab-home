@@ -1,0 +1,84 @@
+---
+- name: Установка Helm на Kubernetes control plane
+  hosts: kube_control_plane
+  become: yes
+  gather_facts: yes
+
+  vars:
+    kubeconfig_path: "/home/{{ ansible_user }}/.kube/config"
+
+  tasks:
+    - name: Проверка существования kubeconfig
+      stat:
+        path: "{{ kubeconfig_path }}"
+      register: kubeconfig_file
+
+    - name: Ошибка, если kubeconfig не найден
+      fail:
+        msg: "kubeconfig не найден. Сначала выполните k8s-control-setup.yml"
+      when: not kubeconfig_file.stat.exists
+
+    - name: Проверка, установлен ли уже Helm
+      command: helm version --kubeconfig={{ kubeconfig_path }}
+      register: helm_check
+      failed_when: false
+      changed_when: false
+
+    - name: Скачивание Helm установщика
+      get_url:
+        url: "https://get.helm.sh/helm-v{{ helm_version }}-linux-amd64.tar.gz"
+        dest: "/tmp/helm-v{{ helm_version }}-linux-amd64.tar.gz"
+        mode: '0644'
+      when: helm_check.rc != 0
+
+    - name: Распаковка Helm
+      unarchive:
+        src: "/tmp/helm-v{{ helm_version }}-linux-amd64.tar.gz"
+        dest: "/tmp"
+        remote_src: yes
+      when: helm_check.rc != 0
+
+    - name: Копирование Helm бинарника в /usr/local/bin
+      copy:
+        src: "/tmp/linux-amd64/helm"
+        dest: "/usr/local/bin/helm"
+        mode: '0755'
+        remote_src: yes
+      when: helm_check.rc != 0
+
+    - name: Удаление временных файлов
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "/tmp/helm-v{{ helm_version }}-linux-amd64.tar.gz"
+        - "/tmp/linux-amd64"
+      when: helm_check.rc != 0
+
+    - name: Проверка установки Helm
+      command: helm version --kubeconfig={{ kubeconfig_path }}
+      register: helm_version_check
+      changed_when: false
+
+    - name: Вывод версии Helm
+      debug:
+        var: helm_version_check.stdout_lines
+
+    - name: Инициализация Helm (если еще не инициализирован)
+      command: helm repo add stable https://charts.helm.sh/stable --kubeconfig={{ kubeconfig_path }}
+      register: helm_repo_add
+      failed_when: false
+      changed_when: "'has been added' in helm_repo_add.stdout or 'already exists' in helm_repo_add.stderr"
+
+    - name: Обновление Helm репозиториев
+      command: helm repo update --kubeconfig={{ kubeconfig_path }}
+      changed_when: true
+
+    - name: Вывод информации об установке Helm
+      debug:
+        msg:
+          - "Helm успешно установлен на {{ inventory_hostname }}!"
+          - "Версия: {{ helm_version }}"
+          - "Helm готов к использованию для установки ingress-nginx-controller"
+          - "Следующий шаг: установка ingress-nginx-controller (см. варианты в README)"
+
