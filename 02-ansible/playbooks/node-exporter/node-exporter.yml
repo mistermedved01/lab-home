@@ -1,0 +1,12 @@
+---
+# Playbook для установки node_exporter на Proxmox хосты
+# Использование: ansible-playbook playbooks/node-exporter/node-exporter.yml -i inventory/prod/hosts.yaml --limit proxmox
+
+- name: Установка node_exporter на Proxmox хосты
+  hosts: proxmox
+  become: yes
+  gather_facts: yes
+
+  roles:
+    - node-exporter
+

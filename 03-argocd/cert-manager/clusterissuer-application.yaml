@@ -1,0 +1,52 @@
+---
+# ArgoCD Application для ClusterIssuer (self-signed сертификаты)
+# ClusterIssuer - это НЕ отдельное приложение, а конфигурационный ресурс для cert-manager
+# 
+# Структура:
+# - cert-manager (приложение) - устанавливается через Helm chart
+# - ClusterIssuer (ресурс) - настраивает cert-manager для генерации сертификатов
+#
+# Этот Application создает ClusterIssuer после установки cert-manager
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager-clusterissuer
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  # Зависимость от cert-manager Application
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"  # Синхронизировать после cert-manager (wave 0)
+spec:
+  project: default
+  
+  # Источник - директория с манифестами из Git репозитория
+  # ВАЖНО: Укажите URL вашего Git репозитория
+  # Если Git репозиторий не используется, примените clusterissuer-selfsigned.yaml вручную
+  source:
+    repoURL: https://github.com/mistermedved01/lab-home.git  
+    targetRevision: HEAD
+    path: 03-argocd/cert-manager
+    directory:
+      # Включаем только файл ClusterIssuer
+      include: clusterissuer-selfsigned.yaml
+  
+  # Назначение - кластерный ресурс (не требует namespace)
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ""
+  
+  # Политика синхронизации
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=false
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

@@ -1,0 +1,16 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: homepage
+
+resources:
+  - base/namespace.yaml
+  - base/configmap.yaml
+  - base/deployment.yaml
+  - base/service.yaml
+  - base/ingress.yaml
+
+commonLabels:
+  app: homepage
+  managed-by: argocd

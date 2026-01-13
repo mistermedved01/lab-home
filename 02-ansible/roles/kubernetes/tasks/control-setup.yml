@@ -1,0 +1,123 @@
+---
+# Инициализация Kubernetes control plane
+
+- name: Проверка, не инициализирован ли уже кластер
+  ansible.builtin.stat:
+    path: /etc/kubernetes/admin.conf
+  register: admin_conf
+  tags:
+    - k8s
+    - checks
+    - control_plane
+
+- name: Получение IP control plane
+  ansible.builtin.set_fact:
+    control_plane_ip: "{{ ansible_default_ipv4.address }}"
+  when: not admin_conf.stat.exists
+  tags:
+    - k8s
+    - init
+    - control_plane
+
+- name: Инициализация control plane через kubeadm
+  ansible.builtin.command:
+    cmd: >
+      kubeadm init
+      --pod-network-cidr={{ pod_network_cidr }}
+      --apiserver-advertise-address={{ control_plane_ip }}
+  args:
+    creates: /etc/kubernetes/admin.conf
+  when: not admin_conf.stat.exists
+  tags:
+    - k8s
+    - init
+    - control_plane
+
+- name: Создание директории .kube для пользователя
+  ansible.builtin.file:
+    path: "/home/{{ ansible_user }}/.kube"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0755'
+  when: not admin_conf.stat.exists
+  tags:
+    - k8s
+    - init
+    - control_plane
+
+- name: Копирование kubeconfig пользователю
+  ansible.builtin.copy:
+    src: /etc/kubernetes/admin.conf
+    dest: "{{ kubeconfig_user_path }}"
+    remote_src: yes
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0644'
+  when: not admin_conf.stat.exists
+  tags:
+    - k8s
+    - init
+    - control_plane
+
+# Проверка доступности API сервера (выполняется всегда, если kubeconfig существует)
+- name: Получение IP control plane для проверки (если кластер уже инициализирован)
+  ansible.builtin.set_fact:
+    control_plane_ip: "{{ ansible_default_ipv4.address }}"
+  when: admin_conf.stat.exists
+  tags:
+    - k8s
+    - checks
+    - control_plane
+
+- name: Проверка существования kubeconfig для проверки API
+  ansible.builtin.stat:
+    path: "{{ kubeconfig_user_path }}"
+  register: kubeconfig_exists
+  tags:
+    - k8s
+    - checks
+    - control_plane
+
+- name: Проверка доступности API сервера
+  ansible.builtin.include_tasks: k8s-api-check.yml
+  vars:
+    kubeconfig_path: "{{ kubeconfig_user_path }}"
+  when: kubeconfig_exists.stat.exists
+  tags:
+    - k8s
+    - checks
+    - control_plane
+
+- name: Получение join command для worker нод
+  ansible.builtin.command:
+    cmd: "kubeadm token create --print-join-command --kubeconfig={{ kubeconfig_user_path }}"
+  register: join_command
+  changed_when: false
+  tags:
+    - k8s
+    - token
+    - control_plane
+
+- name: Сохранение join command локально
+  ansible.builtin.copy:
+    content: "{{ join_command.stdout }}"
+    dest: "{{ playbook_dir }}/.kubeadm-join-command"
+    mode: '0600'
+  delegate_to: localhost
+  tags:
+    - k8s
+    - token
+    - control_plane
+
+- name: Итог
+  ansible.builtin.debug:
+    msg:
+      - "Control plane инициализирован"
+      - "Join command сохранён в {{ playbook_dir }}/.kubeadm-join-command"
+      - "Далее можно ставить CNI и подключать worker ноды"
+  tags:
+    - k8s
+    - info
+    - control_plane
+

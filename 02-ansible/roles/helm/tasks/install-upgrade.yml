@@ -1,0 +1,114 @@
+---
+# Общие задачи для установки и обновления Helm релизов
+
+- name: Повторная проверка доступности API сервера перед установкой
+  ansible.builtin.command:
+    cmd: "kubectl get nodes --kubeconfig={{ kubeconfig_path }}"
+  register: api_check_before_install
+  until: api_check_before_install.rc == 0
+  retries: 20
+  delay: 5
+  changed_when: false
+  when: not release_exists
+  tags:
+    - helm
+    - install
+
+- name: Пауза перед установкой для стабилизации API сервера
+  ansible.builtin.pause:
+    seconds: 10
+  when: not release_exists
+  tags:
+    - helm
+    - install
+
+- name: Установка Helm релиза (без ожидания готовности)
+  ansible.builtin.command:
+    cmd: >
+      helm install {{ helm_release_name }} {{ helm_chart_name }}
+      --namespace {{ helm_namespace }}
+      --create-namespace
+      --values {{ helm_values_file }}
+      {{ helm_extra_args | default('') }}
+      --kubeconfig={{ kubeconfig_path }}
+      --wait=false
+      --timeout=5m
+  register: helm_install
+  when: not release_exists
+  changed_when: true
+  retries: 3
+  delay: 20
+  until: helm_install.rc == 0
+  ignore_errors: true
+  tags:
+    - helm
+    - install
+
+- name: Повторная проверка доступности API сервера перед обновлением
+  ansible.builtin.command:
+    cmd: "kubectl get nodes --kubeconfig={{ kubeconfig_path }}"
+  register: api_check_before_upgrade
+  until: api_check_before_upgrade.rc == 0
+  retries: 20
+  delay: 5
+  changed_when: false
+  when: release_exists
+  tags:
+    - helm
+    - upgrade
+
+- name: Пауза перед обновлением для стабилизации API сервера
+  ansible.builtin.pause:
+    seconds: 10
+  when: release_exists
+  tags:
+    - helm
+    - upgrade
+
+- name: Обновление Helm релиза (если уже установлен, без ожидания)
+  ansible.builtin.command:
+    cmd: >
+      helm upgrade {{ helm_release_name }} {{ helm_chart_name }}
+      --namespace {{ helm_namespace }}
+      --values {{ helm_values_file }}
+      {{ helm_extra_args | default('') }}
+      --kubeconfig={{ kubeconfig_path }}
+      --wait=false
+      --timeout=5m
+  register: helm_upgrade
+  when: release_exists
+  changed_when: true
+  retries: 3
+  delay: 20
+  until: helm_upgrade.rc == 0
+  ignore_errors: true
+  tags:
+    - helm
+    - upgrade
+
+- name: Ожидание восстановления API сервера после установки/обновления
+  ansible.builtin.command:
+    cmd: "kubectl get nodes --kubeconfig={{ kubeconfig_path }}"
+  register: api_check_after_install
+  until: api_check_after_install.rc == 0
+  retries: 30
+  delay: 10
+  changed_when: false
+  when: (helm_install is defined and helm_install.rc is defined and helm_install.rc == 0) or (helm_upgrade is defined and helm_upgrade.rc is defined and helm_upgrade.rc == 0)
+  tags:
+    - helm
+    - checks
+
+- name: Повторная проверка API сервера перед проверкой pods
+  ansible.builtin.command:
+    cmd: "kubectl get nodes --kubeconfig={{ kubeconfig_path }}"
+  register: api_check_before_pods
+  until: api_check_before_pods.rc == 0
+  retries: 30
+  delay: 10
+  changed_when: false
+  when: api_check_after_install is defined and api_check_after_install.rc is defined and api_check_after_install.rc == 0
+  tags:
+    - helm
+    - checks
+

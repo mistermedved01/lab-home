@@ -1,0 +1,82 @@
+---
+# Установка Flannel CNI
+
+- name: Проверка установлен ли Flannel
+  ansible.builtin.command:
+    cmd: "kubectl get daemonset -n kube-flannel kube-flannel-ds --kubeconfig={{ kubeconfig_path }}"
+  register: flannel_check
+  failed_when: false
+  changed_when: false
+  tags:
+    - cni
+    - checks
+
+- name: Установка Flannel
+  ansible.builtin.command:
+    cmd: "kubectl apply -f {{ flannel_manifest_url }} --kubeconfig={{ kubeconfig_path }}"
+  register: flannel_apply
+  when: flannel_check.rc != 0
+  changed_when: "'created' in flannel_apply.stdout or 'configured' in flannel_apply.stdout"
+  tags:
+    - cni
+    - install
+
+- name: Ожидание готовности Flannel pods
+  ansible.builtin.command:
+    cmd: >
+      kubectl wait
+      --for=condition=ready pod
+      -n kube-flannel
+      --selector=app=flannel
+      --timeout=300s
+      --kubeconfig={{ kubeconfig_path }}
+  register: flannel_wait
+  until: flannel_wait.rc == 0
+  retries: 20
+  delay: 10
+  changed_when: false
+  when: (flannel_check.rc != 0) or (flannel_apply.changed is defined)
+  tags:
+    - cni
+    - wait
+
+- name: Проверка статуса нод
+  ansible.builtin.command:
+    cmd: "kubectl get nodes --kubeconfig={{ kubeconfig_path }}"
+  register: nodes_status
+  changed_when: false
+  tags:
+    - cni
+    - status
+
+- name: Проверка системных pod'ов
+  ansible.builtin.command:
+    cmd: "kubectl get pods -n kube-system --kubeconfig={{ kubeconfig_path }}"
+  register: system_pods
+  changed_when: false
+  tags:
+    - cni
+    - status
+
+- name: Проверка статуса Flannel pods
+  ansible.builtin.command:
+    cmd: "kubectl get pods -n kube-flannel --kubeconfig={{ kubeconfig_path }}"
+  register: flannel_pods
+  changed_when: false
+  tags:
+    - cni
+    - status
+
+- name: Результат установки Flannel
+  ansible.builtin.debug:
+    msg:
+      - "Flannel установлен и работает"
+      - "Статус нод:"
+      - "{{ nodes_status.stdout }}"
+      - ""
+      - "Статус Flannel pods:"
+      - "{{ flannel_pods.stdout_lines }}"
+  tags:
+    - cni
+    - status
+

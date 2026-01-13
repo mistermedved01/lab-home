@@ -1,0 +1,48 @@
+---
+# Версия Kubernetes
+kubernetes_version: "1.34.0"
+
+# Kubernetes apt repository
+kubernetes_apt_key: "https://pkgs.k8s.io/core:/stable:/v1.34/deb/Release.key"
+kubernetes_apt_repo: "deb https://pkgs.k8s.io/core:/stable:/v1.34/deb/ /"
+
+# Pod network CIDR (для Flannel)
+pod_network_cidr: "10.244.0.0/16"
+
+# CNI плагин
+cni_plugin: "flannel"
+cni_manifest_url: "https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml"
+
+# Версия containerd
+containerd_version: "1.7"
+
+# Версия Helm
+helm_version: "4.0.0"
+
+# Ansible пользователь
+# Примечание: это значение будет переопределено из inventory, который генерируется Terraform
+# с использованием переменной vm_user
+ansible_user: ubuntu
+
+# Настройки домена для приложений
+# Базовый домен для всех приложений
+base_domain: "lab-home.com"
+
+# Домен для ArgoCD
+argocd_domain: "argocd.lab-home.com"
+
+# Порт для ingress-nginx (NodePort)
+# Если DNS настроен на стандартный порт 80, установите ingress_nginx_http_port: 80
+# и настройте внешний балансировщик/прокси для перенаправления с порта 80 на NodePort
+ingress_nginx_http_port: 30080
+
+# Использовать порт в URL (true/false)
+# Если false, URL будет без порта (например, http://argocd.lab-home.com)
+# Если true, URL будет с портом (например, http://argocd.lab-home.com:30080)
+# Установите false, если DNS настроен на стандартный порт 80 и есть внешний балансировщик
+use_port_in_url: true
+
+# Путь к kubeconfig файлу
+kubeconfig_path: "/home/{{ ansible_user }}/.kube/config"
+
+

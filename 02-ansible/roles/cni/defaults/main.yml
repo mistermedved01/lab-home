@@ -1,0 +1,6 @@
+---
+# Переменные по умолчанию для роли cni
+# kubeconfig_path должен быть определен в group_vars/all.yaml
+flannel_manifest_url: "https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml"
+cni_type: "flannel"
+

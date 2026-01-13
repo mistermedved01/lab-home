@@ -1,0 +1,5 @@
+---
+# Переменные по умолчанию для роли kubernetes
+# kubeconfig_path должен быть определен в group_vars/all.yaml
+# kubeconfig_user_path должен быть определен в playbook при вызове control-setup
+

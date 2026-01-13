@@ -1,0 +1,42 @@
+---
+# Основной файл задач для роли kubernetes
+# Поддерживает несколько режимов работы через переменную kubernetes_task:
+# - control-setup: инициализация control plane
+# - worker-setup: присоединение worker нод
+# - checks: общие проверки Kubernetes (по умолчанию)
+# - reset: сброс кластера
+
+- name: Включение задач инициализации control plane
+  ansible.builtin.include_tasks: control-setup.yml
+  vars:
+    skip_kubeconfig_check: true
+  when: kubernetes_task | default('checks') == 'control-setup'
+  tags:
+    - k8s
+    - control_plane
+    - init
+
+- name: Включение задач присоединения worker нод
+  ansible.builtin.include_tasks: worker-setup.yml
+  vars:
+    skip_kubeconfig_check: true
+  when: kubernetes_task | default('checks') == 'worker-setup'
+  tags:
+    - k8s
+    - worker
+    - join
+
+- name: Включение задач сброса кластера
+  ansible.builtin.include_tasks: reset.yml
+  when: kubernetes_task | default('checks') == 'reset'
+  tags:
+    - k8s
+    - reset
+
+- name: Общие проверки Kubernetes (по умолчанию)
+  ansible.builtin.include_tasks: k8s-checks.yml
+  when: (kubernetes_task | default('checks') == 'checks') and (skip_kubeconfig_check is not defined or not skip_kubeconfig_check)
+  tags:
+    - k8s
+    - checks
+

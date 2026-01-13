@@ -1,0 +1,21 @@
+---
+# ClusterIssuer для self-signed сертификатов
+# Используется для тестовой среды, не требует доступа к интернету
+# 
+# ClusterIssuer - это конфигурационный ресурс для cert-manager,
+# который определяет, как cert-manager будет генерировать TLS сертификаты.
+#
+# Применение:
+# 1. Сначала разверните cert-manager через ArgoCD Application
+# 2. Дождитесь готовности cert-manager (все поды Running)
+# 3. Примените этот файл: kubectl apply -f clusterissuer-selfsigned.yaml
+#
+# После применения cert-manager сможет генерировать self-signed сертификаты
+# для приложений, которые используют аннотацию:
+# cert-manager.io/cluster-issuer: "selfsigned-issuer"
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: selfsigned-issuer
+spec:
+  selfSigned: {}

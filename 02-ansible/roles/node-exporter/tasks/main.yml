@@ -1,0 +1,152 @@
+---
+# Установка node_exporter на Proxmox хосты
+
+# Создание группы для node_exporter
+- name: Создание группы node_exporter
+  ansible.builtin.group:
+    name: "{{ node_exporter_group }}"
+    system: yes
+  tags:
+    - install
+    - config
+
+# Создание пользователя для node_exporter
+- name: Создание пользователя node_exporter
+  ansible.builtin.user:
+    name: "{{ node_exporter_user }}"
+    group: "{{ node_exporter_group }}"
+    system: yes
+    shell: /usr/sbin/nologin
+    home: "{{ node_exporter_install_dir }}"
+    create_home: no
+    comment: "Prometheus Node Exporter"
+  tags:
+    - install
+    - config
+
+# Создание директории для установки
+- name: Создание директории для node_exporter
+  ansible.builtin.file:
+    path: "{{ node_exporter_install_dir }}"
+    state: directory
+    owner: "{{ node_exporter_user }}"
+    group: "{{ node_exporter_group }}"
+    mode: '0755'
+  tags:
+    - install
+
+# Загрузка node_exporter
+- name: Загрузка node_exporter
+  ansible.builtin.get_url:
+    url: "{{ node_exporter_download_url }}"
+    dest: /tmp/node_exporter-{{ node_exporter_version }}.tar.gz
+    mode: '0644'
+    timeout: 30
+  tags:
+    - install
+
+# Распаковка архива
+- name: Распаковка node_exporter
+  ansible.builtin.unarchive:
+    src: /tmp/node_exporter-{{ node_exporter_version }}.tar.gz
+    dest: /tmp
+    remote_src: yes
+    creates: /tmp/node_exporter-{{ node_exporter_version }}.linux-amd64/node_exporter
+  tags:
+    - install
+
+# Копирование бинарника
+- name: Копирование бинарника node_exporter
+  ansible.builtin.copy:
+    src: /tmp/node_exporter-{{ node_exporter_version }}.linux-amd64/node_exporter
+    dest: "{{ node_exporter_binary_path }}"
+    owner: "{{ node_exporter_user }}"
+    group: "{{ node_exporter_group }}"
+    mode: '0755'
+    remote_src: yes
+  notify: restart node_exporter
+  tags:
+    - install
+    - upgrade
+
+# Создание systemd service файла
+- name: Создание systemd service для node_exporter
+  ansible.builtin.template:
+    src: node_exporter.service.j2
+    dest: /etc/systemd/system/{{ node_exporter_systemd_service }}
+    mode: '0644'
+  notify: restart node_exporter
+  tags:
+    - install
+    - config
+
+# Перезагрузка systemd daemon
+- name: Перезагрузка systemd daemon
+  ansible.builtin.systemd:
+    daemon_reload: yes
+  tags:
+    - install
+    - config
+
+# Включение и запуск node_exporter
+- name: Включение и запуск node_exporter
+  ansible.builtin.systemd:
+    name: "{{ node_exporter_systemd_service }}"
+    enabled: yes
+    state: started
+  tags:
+    - install
+    - restart
+
+# Очистка временных файлов
+- name: Удаление временных файлов
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /tmp/node_exporter-{{ node_exporter_version }}.tar.gz
+    - /tmp/node_exporter-{{ node_exporter_version }}.linux-amd64
+  tags:
+    - install
+    - cleanup
+
+# Настройка firewall (если включен)
+- name: Открытие порта для node_exporter в firewall (ufw)
+  ansible.builtin.ufw:
+    rule: allow
+    port: "{{ node_exporter_port }}"
+    proto: tcp
+    comment: "Prometheus Node Exporter"
+  when:
+    - node_exporter_firewall_enabled | bool
+    - ansible_os_family == "Debian"
+  tags:
+    - config
+    - firewall
+
+# Проверка доступности node_exporter
+- name: Проверка доступности node_exporter
+  ansible.builtin.uri:
+    url: "http://localhost:{{ node_exporter_port }}/metrics"
+    method: GET
+    status_code: 200
+    timeout: 5
+  register: node_exporter_check
+  retries: 5
+  delay: 2
+  until: node_exporter_check.status == 200
+  tags:
+    - install
+    - verify
+
+- name: Вывод информации о node_exporter
+  ansible.builtin.debug:
+    msg:
+      - "Node Exporter установлен и запущен"
+      - "Версия: {{ node_exporter_version }}"
+      - "Порт: {{ node_exporter_port }}"
+      - "URL метрик: http://{{ ansible_default_ipv4.address }}:{{ node_exporter_port }}/metrics"
+  tags:
+    - install
+    - verify
+

@@ -1,0 +1,124 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: prometheus-stack
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    repoURL: https://prometheus-community.github.io/helm-charts
+    chart: kube-prometheus-stack
+    targetRevision: 80.10.0
+    helm:
+      values: |
+        cleanPrometheusOperatorObjectNames: true
+        prometheusOperator:
+          enabled: true
+
+        prometheus:
+          enabled: true
+          prometheusSpec:
+            replicas: 1
+            retention: 1d
+            podMonitorSelectorNilUsesHelmValues: false
+            ruleSelectorNilUsesHelmValues: false
+            serviceMonitorSelectorNilUsesHelmValues: false
+            storageSpec:
+              emptyDir: {}
+            resources:
+              requests:
+                memory: "512Mi"
+                cpu: "250m"
+              limits:
+                memory: "1Gi"
+                cpu: "500m"
+
+        alertmanager:
+          enabled: true
+          alertmanagerSpec:
+            replicas: 1
+            storage:
+              emptyDir: {}
+            resources:
+              requests:
+                memory: "256Mi"
+                cpu: "100m"
+              limits:
+                memory: "512Mi"
+                cpu: "250m"
+
+        grafana:
+          enabled: true
+          replicas: 1
+          adminPassword: admin
+          service:
+            type: ClusterIP
+          resources:
+            requests:
+              memory: 256Mi
+              cpu: 100m
+            limits:
+              memory: 512Mi
+              cpu: 250m
+          # additionalDataSources не нужен - chart создает datasource автоматически
+
+          ingress:
+            enabled: true
+            ingressClassName: nginx
+            annotations:
+              cert-manager.io/cluster-issuer: "selfsigned-issuer"
+              nginx.ingress.kubernetes.io/ssl-redirect: "true"
+              nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+            hosts:
+              - grafana.lab-home.com
+            tls:
+              - secretName: grafana-tls
+                hosts:
+                  - grafana.lab-home.com
+
+        nodeExporter:
+          enabled: true
+          hostNetwork: false
+          hostPID: false
+          hostIPC: false
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "100m"
+
+        kubeStateMetrics:
+          enabled: true
+          replicas: 1
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "100m"
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - SkipCRDs=false
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

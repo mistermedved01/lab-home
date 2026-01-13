@@ -1,0 +1,10 @@
+---
+# Основной файл задач для роли helm
+# Предоставляет установку Helm
+
+- name: Установка Helm
+  ansible.builtin.include_tasks: install.yml
+  tags:
+    - helm
+    - install
+

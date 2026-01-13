@@ -1,0 +1,21 @@
+---
+galaxy_info:
+  author: lab-home
+  description: |
+    Kubernetes cluster setup and management role.
+    Provides tasks for:
+    - Control plane initialization (control-setup)
+    - Worker node joining (worker-setup)
+    - Cluster reset (reset)
+    - Kubernetes checks and API validation (k8s-checks)
+    Use kubernetes_task variable to select the task set.
+  license: MIT
+  min_ansible_version: "2.9"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - focal
+        - jammy
+
+dependencies: []
+

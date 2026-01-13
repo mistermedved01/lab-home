@@ -1,0 +1,12 @@
+---
+- name: Сброс Kubernetes кластера
+  hosts: k8s_cluster
+  become: yes
+  gather_facts: yes
+
+  vars:
+    kubernetes_task: reset
+
+  roles:
+    - kubernetes
+

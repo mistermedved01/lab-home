@@ -1,0 +1,21 @@
+---
+# Общие проверки для Helm playbooks
+
+- name: Проверка, установлен ли уже Helm
+  ansible.builtin.command:
+    cmd: "helm version --kubeconfig={{ kubeconfig_path }}"
+  register: helm_check
+  failed_when: false
+  changed_when: false
+  tags:
+    - checks
+    - helm
+
+- name: Ошибка, если Helm не установлен
+  ansible.builtin.fail:
+    msg: "Helm не установлен. Сначала выполните установку Helm"
+  when: helm_check.rc != 0
+  tags:
+    - checks
+    - helm
+

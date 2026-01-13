@@ -1,0 +1,85 @@
+controller:
+  replicaCount: 1
+
+  # Настройки сервиса
+  service:
+    type: NodePort
+    nodePorts:
+      http: 30080
+      https: 30443
+    annotations: {}
+
+  # Включаем SSL passthrough для ArgoCD и других приложений
+  extraArgs:
+    enable-ssl-passthrough: ""
+
+  # Размещение на worker нодах
+  # Вариант 1: По hostname (работает, но не гибко - только для конкретной ноды)
+  # nodeSelector:
+  #   kubernetes.io/hostname: k8s-worker-01
+  
+  # Вариант 2: Исключить control plane ноды (рекомендуется)
+  # Используем отрицание - запускаем везде, кроме control plane
+  nodeSelector: {}
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: DoesNotExist
+              - key: node-role.kubernetes.io/master
+                operator: DoesNotExist
+  
+  # Tolerations для worker нод (обычно не нужны, но можно добавить если есть taints)
+  tolerations: []
+
+  # Ресурсы для учебного кластера
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+  # Отключаем autoscaling
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 2
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+
+  # Pod Disruption Budget
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+
+  # Метрики для мониторинга
+  metrics:
+    enabled: true
+    # ServiceMonitor временно отключен при установке через Ansible
+    # Будет включен автоматически через ArgoCD после установки prometheus-stack
+    serviceMonitor:
+      enabled: false
+      namespace: ingress-nginx
+      namespaceSelector: {}
+      interval: 30s
+      scrapeTimeout: 10s
+      labels: {}
+      annotations: {}
+
+  # Отключаем admission webhook для стабильности
+  admissionWebhooks:
+    enabled: false
+
+defaultBackend:
+  enabled: true
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi

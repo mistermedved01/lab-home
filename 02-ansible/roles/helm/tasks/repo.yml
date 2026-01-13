@@ -1,0 +1,26 @@
+---
+# Общие задачи для управления Helm репозиториями
+
+- name: Добавление Helm репозитория
+  ansible.builtin.command:
+    cmd: >
+      helm repo add {{ helm_repo_name }} {{ helm_repo_url }}
+      --kubeconfig={{ kubeconfig_path }}
+  register: helm_repo_add
+  failed_when: false
+  changed_when: >
+    'has been added' in helm_repo_add.stdout
+    or 'already exists' in helm_repo_add.stderr
+  tags:
+    - helm
+    - repo
+
+- name: Обновление Helm репозиториев
+  ansible.builtin.command:
+    cmd: "helm repo update --kubeconfig={{ kubeconfig_path }}"
+  changed_when: true
+  ignore_errors: yes
+  tags:
+    - helm
+    - repo
+

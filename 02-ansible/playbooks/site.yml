@@ -1,0 +1,27 @@
+---
+# Master playbook для полной установки Kubernetes кластера
+# Запуск: ansible-playbook playbooks/site.yml -i inventory/prod/hosts.yaml
+
+# Базовая настройка нод Kubernetes
+- import_playbook: k8s/common.yml
+
+# Инициализация control plane
+- import_playbook: k8s/control-plane.yml
+
+# Установка CNI
+- import_playbook: k8s/cni.yml
+
+# Присоединение worker нод
+- import_playbook: k8s/worker.yml
+
+# Установка Helm
+- import_playbook: helm/helm.yml
+
+# Установка ingress-nginx
+- import_playbook: ingress-nginx/ingress-nginx.yml
+
+# Установка ArgoCD
+- import_playbook: argocd/argocd.yml
+
+# Установка node_exporter на Proxmox хосты
+- import_playbook: node-exporter/node-exporter.yml

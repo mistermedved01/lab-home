@@ -1,0 +1,54 @@
+---
+# Общие проверки для Kubernetes playbooks
+
+- name: Проверка существования kubeconfig
+  ansible.builtin.stat:
+    path: "{{ kubeconfig_path }}"
+  register: kubeconfig_file
+  tags:
+    - checks
+    - k8s
+
+- name: Ошибка, если kubeconfig не найден
+  ansible.builtin.fail:
+    msg: "kubeconfig не найден. Сначала выполните инициализацию control plane"
+  when:
+    - not kubeconfig_file.stat.exists
+    - skip_kubeconfig_check is not defined or not skip_kubeconfig_check
+  tags:
+    - checks
+    - k8s
+
+- name: Получение IP адреса control plane ноды
+  ansible.builtin.set_fact:
+    control_plane_ip: "{{ ansible_default_ipv4.address }}"
+  tags:
+    - checks
+    - k8s
+
+- name: Ожидание готовности API сервера (порт 6443)
+  ansible.builtin.wait_for:
+    host: "{{ control_plane_ip }}"
+    port: 6443
+    delay: 10
+    timeout: 300
+  when: skip_kubeconfig_check is not defined or not skip_kubeconfig_check
+  tags:
+    - checks
+    - k8s
+
+- name: Проверка доступности API сервера через kubectl
+  ansible.builtin.command:
+    cmd: "kubectl get nodes --kubeconfig={{ kubeconfig_path }}"
+  register: api_check
+  until: api_check.rc == 0
+  retries: 30
+  delay: 10
+  changed_when: false
+  when:
+    - kubeconfig_file.stat.exists
+    - skip_kubeconfig_check is not defined or not skip_kubeconfig_check
+  tags:
+    - checks
+    - k8s
+

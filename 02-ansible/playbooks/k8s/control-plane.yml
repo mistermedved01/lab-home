@@ -1,0 +1,14 @@
+---
+- name: Инициализация Kubernetes control plane
+  hosts: kube_control_plane
+  become: yes
+  gather_facts: yes
+
+  vars:
+    kubernetes_task: control-setup
+
+  roles:
+    - role: kubernetes
+      vars:
+        kubeconfig_user_path: "/home/{{ ansible_user }}/.kube/config"
+

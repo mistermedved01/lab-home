@@ -1,0 +1,22 @@
+---
+# Общие задачи для ожидания готовности pods
+
+- name: Ожидание готовности pods
+  ansible.builtin.command:
+    cmd: >
+      kubectl wait --namespace {{ helm_namespace }}
+      --for=condition=ready pod
+      --selector={{ pod_selector }}
+      --timeout=300s
+      --kubeconfig={{ kubeconfig_path }}
+  register: pods_wait
+  until: pods_wait.rc == 0
+  retries: 30
+  delay: 10
+  changed_when: false
+  failed_when: false
+  when: api_check_before_pods.rc == 0
+  tags:
+    - pods
+    - wait
+

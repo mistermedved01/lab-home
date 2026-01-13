@@ -1,0 +1,103 @@
+---
+# Установка Helm на Kubernetes control plane
+
+- name: Проверка, установлен ли уже Helm
+  ansible.builtin.command:
+    cmd: "helm version --kubeconfig={{ kubeconfig_path }}"
+  register: helm_check
+  failed_when: false
+  changed_when: false
+  tags:
+    - helm
+    - checks
+
+- name: Скачивание Helm установщика
+  ansible.builtin.get_url:
+    url: "https://get.helm.sh/helm-v{{ helm_version }}-linux-amd64.tar.gz"
+    dest: "/tmp/helm-v{{ helm_version }}-linux-amd64.tar.gz"
+    mode: '0644'
+  when: helm_check.rc != 0
+  tags:
+    - helm
+    - install
+
+- name: Распаковка Helm
+  ansible.builtin.unarchive:
+    src: "/tmp/helm-v{{ helm_version }}-linux-amd64.tar.gz"
+    dest: "/tmp"
+    remote_src: yes
+  when: helm_check.rc != 0
+  tags:
+    - helm
+    - install
+
+- name: Копирование Helm бинарника в /usr/local/bin
+  ansible.builtin.copy:
+    src: "/tmp/linux-amd64/helm"
+    dest: "/usr/local/bin/helm"
+    mode: '0755'
+    remote_src: yes
+  when: helm_check.rc != 0
+  tags:
+    - helm
+    - install
+
+- name: Удаление временных файлов
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "/tmp/helm-v{{ helm_version }}-linux-amd64.tar.gz"
+    - "/tmp/linux-amd64"
+  when: helm_check.rc != 0
+  tags:
+    - cleanup
+
+- name: Проверка установки Helm
+  ansible.builtin.command:
+    cmd: "helm version --kubeconfig={{ kubeconfig_path }}"
+  register: helm_version_check
+  changed_when: false
+  tags:
+    - helm
+    - checks
+
+- name: Вывод версии Helm
+  ansible.builtin.debug:
+    var: helm_version_check.stdout_lines
+  tags:
+    - helm
+    - info
+
+- name: Инициализация Helm (если еще не инициализирован)
+  ansible.builtin.command:
+    cmd: "helm repo add stable https://charts.helm.sh/stable --kubeconfig={{ kubeconfig_path }}"
+  register: helm_repo_add
+  failed_when: false
+  changed_when: >
+    'has been added' in helm_repo_add.stdout
+    or 'already exists' in helm_repo_add.stderr
+  tags:
+    - helm
+    - repo
+
+- name: Обновление Helm репозиториев
+  ansible.builtin.command:
+    cmd: "helm repo update --kubeconfig={{ kubeconfig_path }}"
+  changed_when: true
+  ignore_errors: yes
+  tags:
+    - helm
+    - repo
+
+- name: Вывод информации об установке Helm
+  ansible.builtin.debug:
+    msg:
+      - "Helm успешно установлен на {{ inventory_hostname }}!"
+      - "Версия: {{ helm_version }}"
+      - "Helm готов к использованию для установки ingress-nginx-controller"
+      - "Следующий шаг: установка ingress-nginx-controller (см. варианты в README)"
+  tags:
+    - helm
+    - info
+

@@ -1,0 +1,4 @@
+---
+# Переменные по умолчанию для роли helm
+# helm_version должен быть определен в group_vars/all.yaml
+# kubeconfig_path должен быть определен в group_vars/all.yaml

@@ -1,0 +1,12 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: homepage-config
+  namespace: homepage
+data:
+  # Разрешенные хосты для Homepage (включая вариант с портом)
+  HOMEPAGE_ALLOWED_HOSTS: "homepage.lab-home.com,homepage.lab-home.com:30443,localhost"
+  # PUID и PGID для файлов (опционально)
+  PUID: "1000"
+  PGID: "1000"

@@ -1,0 +1,22 @@
+---
+galaxy_info:
+  author: lab-home
+  description: |
+    Common server setup role for Kubernetes nodes.
+    Configures:
+    - Swap disable
+    - Kernel modules (overlay, br_netfilter)
+    - Sysctl parameters
+    - Kubernetes repository setup
+    - Containerd installation and configuration
+    - Kubernetes packages (kubelet, kubeadm, kubectl)
+  license: MIT
+  min_ansible_version: "2.9"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - focal
+        - jammy
+
+dependencies: []
+

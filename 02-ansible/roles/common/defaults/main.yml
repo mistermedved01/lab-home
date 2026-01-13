@@ -1,0 +1,6 @@
+---
+# Переменные по умолчанию для роли common
+kubernetes_apt_key_url: "{{ kubernetes_apt_key | default('https://pkgs.k8s.io/core:/stable:/v1.34/deb/Release.key') }}"
+kubernetes_apt_repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.34/deb/ /"
+containerd_version: "{{ containerd_version | default('1.7') }}"
+

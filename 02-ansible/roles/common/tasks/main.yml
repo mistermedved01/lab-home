@@ -1,0 +1,241 @@
+---
+# Подготовка нод Kubernetes (kubeadm compatible)
+
+# Swap
+- name: Отключение swap
+  ansible.builtin.command:
+    cmd: swapoff -a
+  changed_when: false
+  tags:
+    - install
+    - config
+
+- name: Отключение swap в fstab
+  ansible.builtin.replace:
+    path: /etc/fstab
+    regexp: '^([^#].*\sswap\s)'
+    replace: '# \1'
+  tags:
+    - install
+    - config
+
+# Kernel modules
+- name: Загрузка модулей ядра
+  ansible.builtin.modprobe:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - overlay
+    - br_netfilter
+  tags:
+    - install
+    - config
+
+- name: Автозагрузка модулей ядра
+  ansible.builtin.copy:
+    dest: /etc/modules-load.d/k8s.conf
+    content: |
+      overlay
+      br_netfilter
+    mode: '0644'
+  tags:
+    - install
+    - config
+
+# Sysctl
+- name: Настройка sysctl для Kubernetes
+  ansible.builtin.copy:
+    dest: /etc/sysctl.d/k8s.conf
+    mode: '0644'
+    content: |
+      net.bridge.bridge-nf-call-iptables  = 1
+      net.bridge.bridge-nf-call-ip6tables = 1
+      net.ipv4.ip_forward                 = 1
+  tags:
+    - install
+    - config
+
+- name: Применение sysctl параметров
+  ansible.builtin.command:
+    cmd: sysctl --system
+  changed_when: false
+  tags:
+    - install
+    - config
+
+# Kubernetes repository setup
+- name: Удаление старого файла репозитория Kubernetes (если есть)
+  ansible.builtin.file:
+    path: /etc/apt/sources.list.d/kubernetes.list
+    state: absent
+  tags:
+    - install
+
+- name: Установка зависимостей APT
+  ansible.builtin.apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg
+    state: present
+    update_cache: no
+  tags:
+    - install
+
+- name: Создание директории keyrings
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+  tags:
+    - install
+
+- name: Загрузка и обработка GPG ключа Kubernetes
+  ansible.builtin.shell: |
+    curl -fsSL "{{ kubernetes_apt_key_url }}" | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+    chmod 644 /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+    curl -fsSL "{{ kubernetes_apt_key_url }}" | gpg --dearmor -o /etc/apt/trusted.gpg.d/kubernetes.gpg
+    chmod 644 /etc/apt/trusted.gpg.d/kubernetes.gpg
+  args:
+    creates: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+  tags:
+    - install
+
+- name: Проверка создания GPG ключа
+  ansible.builtin.stat:
+    path: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+  register: gpg_key_file
+  tags:
+    - install
+
+- name: Ошибка, если ключ не создан
+  ansible.builtin.fail:
+    msg: "GPG ключ не был создан в /etc/apt/keyrings/kubernetes-apt-keyring.gpg"
+  when: not gpg_key_file.stat.exists
+  tags:
+    - install
+
+- name: Добавление Kubernetes репозитория
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/kubernetes.list
+    content: "{{ kubernetes_apt_repo }}\n"
+    mode: '0644'
+  tags:
+    - install
+    - config
+
+- name: Обновление APT кеша после настройки репозитория
+  ansible.builtin.apt:
+    update_cache: yes
+  tags:
+    - install
+
+# Container runtime
+- name: Установка containerd
+  ansible.builtin.apt:
+    name: containerd
+    state: present
+    update_cache: no
+  tags:
+    - install
+
+- name: Создание директории /etc/containerd
+  ansible.builtin.file:
+    path: /etc/containerd
+    state: directory
+    mode: '0755'
+  tags:
+    - install
+
+- name: Генерация дефолтного конфига containerd
+  ansible.builtin.command:
+    cmd: containerd config default
+  register: containerd_default_config
+  changed_when: false
+  tags:
+    - install
+    - config
+
+- name: Установка конфига containerd
+  ansible.builtin.copy:
+    dest: /etc/containerd/config.toml
+    content: "{{ containerd_default_config.stdout }}"
+    mode: '0644'
+  notify: restart containerd
+  tags:
+    - install
+    - config
+
+- name: Включение SystemdCgroup
+  ansible.builtin.replace:
+    path: /etc/containerd/config.toml
+    regexp: 'SystemdCgroup = false'
+    replace: 'SystemdCgroup = true'
+  notify: restart containerd
+  tags:
+    - install
+    - config
+
+- name: Включение и запуск containerd
+  ansible.builtin.systemd:
+    name: containerd
+    enabled: yes
+    state: started
+  tags:
+    - install
+    - restart
+
+# Kubernetes packages
+- name: Установка kubelet, kubeadm, kubectl
+  ansible.builtin.apt:
+    name:
+      - kubelet
+      - kubeadm
+      - kubectl
+    state: present
+    update_cache: no
+  register: k8s_packages_install
+  retries: 5
+  delay: 20
+  until: k8s_packages_install is succeeded
+  timeout: 900
+  tags:
+    - install
+
+- name: Проверка установки пакетов
+  ansible.builtin.command:
+    cmd: dpkg -l | grep -E "^ii.*kube(let|adm|ctl)"
+  register: k8s_packages_check
+  changed_when: false
+  failed_when: false
+  tags:
+    - install
+
+- name: Вывод информации об установленных пакетах
+  ansible.builtin.debug:
+    var: k8s_packages_check.stdout_lines
+  when: k8s_packages_check.rc == 0
+  tags:
+    - install
+
+- name: Блокировка обновлений Kubernetes пакетов
+  ansible.builtin.dpkg_selections:
+    name: "{{ item }}"
+    selection: hold
+  loop:
+    - kubelet
+    - kubeadm
+    - kubectl
+  tags:
+    - install
+    - config
+
+- name: Включение kubelet
+  ansible.builtin.systemd:
+    name: kubelet
+    enabled: yes
+  tags:
+    - install
+    - config
+

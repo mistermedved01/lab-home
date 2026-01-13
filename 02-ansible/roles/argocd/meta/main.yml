@@ -1,0 +1,20 @@
+---
+galaxy_info:
+  author: lab-home
+  description: |
+    ArgoCD installation and management role for Kubernetes.
+    Installs and manages ArgoCD using Helm.
+    Provides ingress management and access information.
+    All configuration variables use the argocd_ prefix.
+  license: MIT
+  min_ansible_version: "2.9"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - focal
+        - jammy
+
+dependencies:
+  - role: kubernetes
+  - role: helm
+

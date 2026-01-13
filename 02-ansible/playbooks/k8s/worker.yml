@@ -1,0 +1,12 @@
+---
+- name: Присоединение worker нод к Kubernetes
+  hosts: kube_node
+  become: yes
+  gather_facts: yes
+
+  vars:
+    kubernetes_task: worker-setup
+
+  roles:
+    - kubernetes
+

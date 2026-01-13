@@ -1,0 +1,123 @@
+---
+# Установка ingress-nginx через Helm
+
+# Общие проверки Kubernetes и Helm
+- name: Выполнение общих проверок Kubernetes
+  ansible.builtin.include_role:
+    name: kubernetes
+    tasks_from: k8s-checks
+  tags:
+    - checks
+    - k8s
+
+- name: Выполнение общих проверок Helm
+  ansible.builtin.include_role:
+    name: helm
+    tasks_from: checks
+  tags:
+    - checks
+    - helm
+
+# Подготовка values файла
+- name: Копирование values файла на удаленный хост
+  ansible.builtin.copy:
+    src: "{{ playbooks_dir | default('/etc/ansible/playbooks') }}/ingress-nginx/values.yaml"
+    dest: "{{ ingress_nginx_helm_values_file }}"
+    mode: '0644'
+  tags:
+    - config
+    - prepare
+
+# Управление Helm репозиторием
+- name: Управление Helm репозиторием
+  ansible.builtin.include_role:
+    name: helm
+    tasks_from: repo
+  vars:
+    helm_repo_name: "{{ ingress_nginx_helm_repo_name }}"
+    helm_repo_url: "{{ ingress_nginx_helm_repo_url }}"
+  tags:
+    - install
+    - config
+
+# Проверка существования релиза
+- name: Проверка Helm релиза
+  ansible.builtin.include_role:
+    name: helm
+    tasks_from: release-checks
+  vars:
+    helm_release_name: "{{ ingress_nginx_helm_release_name }}"
+    helm_namespace: "{{ ingress_nginx_helm_namespace }}"
+  tags:
+    - checks
+
+# Проверка памяти перед установкой
+- name: Проверка доступной памяти перед установкой
+  ansible.builtin.shell: free -m | awk 'NR==2{printf "%.0f", $7}'
+  register: available_memory_mb
+  changed_when: false
+  when:
+    - ingress_nginx_check_memory
+    - not release_exists
+  tags:
+    - checks
+
+- name: Предупреждение о нехватке памяти
+  ansible.builtin.debug:
+    msg: >
+      ВНИМАНИЕ: Доступно только {{ available_memory_mb.stdout }}MB памяти.
+      Рекомендуется минимум {{ ingress_nginx_min_memory_mb }}MB свободной памяти для установки ingress-nginx.
+  when:
+    - ingress_nginx_check_memory
+    - not release_exists
+    - available_memory_mb.stdout is defined
+    - available_memory_mb.stdout | int < ingress_nginx_min_memory_mb
+  tags:
+    - checks
+
+# Установка или обновление ingress-nginx
+- name: Установка или обновление Helm релиза
+  ansible.builtin.include_role:
+    name: helm
+    tasks_from: install-upgrade
+  vars:
+    helm_release_name: "{{ ingress_nginx_helm_release_name }}"
+    helm_chart_name: "{{ ingress_nginx_helm_chart_name }}"
+    helm_namespace: "{{ ingress_nginx_helm_namespace }}"
+    helm_values_file: "{{ ingress_nginx_helm_values_file }}"
+    helm_extra_args: ""
+  tags:
+    - install
+    - upgrade
+
+# Ожидание готовности pods
+- name: Ожидание готовности pods
+  ansible.builtin.include_role:
+    name: helm
+    tasks_from: wait-for-pods
+  vars:
+    helm_namespace: "{{ ingress_nginx_helm_namespace }}"
+    pod_selector: "{{ ingress_nginx_pod_selector }}"
+  tags:
+    - wait
+
+# Вывод информации
+- name: Вывод информации о релизе
+  ansible.builtin.include_role:
+    name: helm
+    tasks_from: status-info
+  vars:
+    helm_namespace: "{{ ingress_nginx_helm_namespace }}"
+    helm_release_name: "{{ ingress_nginx_helm_release_name }}"
+    release_name: "{{ ingress_nginx_release_name }}"
+  tags:
+    - status
+
+# Очистка
+- name: Удаление временного values файла
+  ansible.builtin.file:
+    path: "{{ ingress_nginx_helm_values_file }}"
+    state: absent
+  tags:
+    - cleanup
+

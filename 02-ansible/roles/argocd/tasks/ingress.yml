@@ -1,0 +1,91 @@
+---
+# Общие задачи для работы с ingress ArgoCD
+
+- name: Получение имени ingress для ArgoCD
+  ansible.builtin.command:
+    cmd: >
+      kubectl get ingress
+      --namespace {{ argocd_helm_namespace }}
+      --kubeconfig={{ kubeconfig_path }}
+      -o jsonpath='{.items[?(@.metadata.labels.app\.kubernetes\.io/name=="argocd-server")].metadata.name}'
+  register: argocd_ingress_name_result
+  failed_when: false
+  changed_when: false
+  tags:
+    - argocd
+    - ingress
+
+- name: Установка имени ingress
+  ansible.builtin.set_fact:
+    argocd_ingress_name: "{{ argocd_ingress_name_result.stdout | default('argocd-server') }}"
+  tags:
+    - argocd
+    - ingress
+
+- name: Получение текущего домена из ingress
+  ansible.builtin.command:
+    cmd: >
+      kubectl get ingress {{ argocd_ingress_name }}
+      --namespace {{ argocd_helm_namespace }}
+      --kubeconfig={{ kubeconfig_path }}
+      -o jsonpath='{.spec.rules[0].host}'
+  register: current_ingress_host
+  failed_when: false
+  changed_when: false
+  tags:
+    - argocd
+    - ingress
+
+- name: Создание временного файла для patch ingress
+  ansible.builtin.copy:
+    content: |
+      spec:
+        rules:
+          - host: {{ argocd_domain }}
+            http:
+              paths:
+                - path: /
+                  pathType: Prefix
+                  backend:
+                    service:
+                      name: argocd-server
+                      port:
+                        number: 80
+    dest: /tmp/argocd-ingress-patch.yaml
+    mode: '0644'
+  when:
+    - current_ingress_host.stdout is defined
+    - current_ingress_host.stdout != argocd_domain
+  tags:
+    - argocd
+    - ingress
+
+- name: Обновление ingress через kubectl patch
+  ansible.builtin.command:
+    cmd: >
+      kubectl patch ingress {{ argocd_ingress_name }}
+      --namespace {{ argocd_helm_namespace }}
+      --type merge
+      --patch-file /tmp/argocd-ingress-patch.yaml
+      --kubeconfig={{ kubeconfig_path }}
+  register: ingress_patch
+  failed_when: false
+  changed_when: ingress_patch.rc == 0
+  when:
+    - current_ingress_host.stdout is defined
+    - current_ingress_host.stdout != argocd_domain
+  tags:
+    - argocd
+    - ingress
+
+- name: Удаление временного файла patch
+  ansible.builtin.file:
+    path: /tmp/argocd-ingress-patch.yaml
+    state: absent
+  when:
+    - current_ingress_host.stdout is defined
+    - current_ingress_host.stdout != argocd_domain
+  tags:
+    - argocd
+    - ingress
+

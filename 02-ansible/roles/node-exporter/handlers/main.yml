@@ -1,0 +1,9 @@
+---
+# Handlers для роли node-exporter
+
+- name: restart node_exporter
+  ansible.builtin.systemd:
+    name: "{{ node_exporter_systemd_service }}"
+    state: restarted
+    daemon_reload: yes
+

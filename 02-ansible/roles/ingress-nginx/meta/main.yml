@@ -1,0 +1,19 @@
+---
+galaxy_info:
+  author: lab-home
+  description: |
+    Ingress-nginx installation and management role for Kubernetes.
+    Installs and manages ingress-nginx using Helm.
+    All configuration variables use the ingress_nginx_ prefix.
+  license: MIT
+  min_ansible_version: "2.9"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - focal
+        - jammy
+
+dependencies:
+  - role: kubernetes
+  - role: helm
+

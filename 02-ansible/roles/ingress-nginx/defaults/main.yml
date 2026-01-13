@@ -1,0 +1,14 @@
+---
+# Переменные по умолчанию для роли ingress-nginx
+# kubeconfig_path должен быть определен в group_vars/all.yaml
+ingress_nginx_helm_release_name: "ingress-nginx"
+ingress_nginx_helm_namespace: "ingress-nginx"
+ingress_nginx_helm_repo_name: "ingress-nginx"
+ingress_nginx_helm_repo_url: "https://kubernetes.github.io/ingress-nginx"
+ingress_nginx_helm_chart_name: "ingress-nginx/ingress-nginx"
+ingress_nginx_helm_values_file: "/tmp/ingress-nginx-values.yaml"
+ingress_nginx_release_name: "ingress-nginx"
+ingress_nginx_pod_selector: "app.kubernetes.io/component=controller"
+ingress_nginx_check_memory: true
+ingress_nginx_min_memory_mb: 2048
+

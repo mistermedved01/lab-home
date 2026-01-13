@@ -1,0 +1,71 @@
+---
+# Общие задачи для проверки и управления Helm релизами
+
+- name: Проверка, установлен ли уже Helm релиз
+  ansible.builtin.command:
+    cmd: >
+      helm list --namespace {{ helm_namespace }}
+      --kubeconfig={{ kubeconfig_path }}
+      --output json
+  register: helm_list
+  failed_when: false
+  changed_when: false
+  tags:
+    - helm
+    - checks
+
+- name: Парсинг списка Helm релизов
+  ansible.builtin.set_fact:
+    helm_releases: "{{ (helm_list.stdout | from_json) if helm_list.stdout and helm_list.stdout | trim != '' else [] }}"
+  when: helm_list.rc == 0
+  tags:
+    - helm
+    - checks
+
+- name: Установка пустого списка релизов, если helm list не сработал
+  ansible.builtin.set_fact:
+    helm_releases: []
+  when: helm_list.rc != 0 or helm_list.stdout is not defined or helm_list.stdout | trim == ''
+  tags:
+    - helm
+    - checks
+
+- name: Проверка наличия релиза в списке
+  ansible.builtin.set_fact:
+    release_exists: "{{ helm_release_name in (helm_releases | map(attribute='name') | list | default([])) }}"
+  tags:
+    - helm
+    - checks
+
+- name: Разблокировка Helm релиза через удаление секрета блокировки (pending-upgrade)
+  ansible.builtin.command:
+    cmd: >
+      kubectl delete secret
+      -n {{ helm_namespace }}
+      -l owner=helm,name={{ helm_release_name }},status=pending-upgrade
+      --kubeconfig={{ kubeconfig_path }}
+  register: unlock_secret_upgrade
+  failed_when: false
+  changed_when: unlock_secret_upgrade.rc == 0
+  when: release_exists
+  ignore_errors: true
+  tags:
+    - helm
+    - unlock
+
+- name: Разблокировка Helm релиза через удаление секрета блокировки (pending-install)
+  ansible.builtin.command:
+    cmd: >
+      kubectl delete secret
+      -n {{ helm_namespace }}
+      -l owner=helm,name={{ helm_release_name }},status=pending-install
+      --kubeconfig={{ kubeconfig_path }}
+  register: unlock_secret_install
+  failed_when: false
+  changed_when: unlock_secret_install.rc == 0
+  when: release_exists
+  ignore_errors: true
+  tags:
+    - helm
+    - unlock
+

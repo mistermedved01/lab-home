@@ -1,0 +1,61 @@
+---
+# Общие задачи для вывода информации о Helm релизе
+
+- name: Получение статуса pods
+  ansible.builtin.command:
+    cmd: "kubectl get pods --namespace {{ helm_namespace }} --kubeconfig={{ kubeconfig_path }}"
+  register: helm_pods_status
+  changed_when: false
+  failed_when: false
+  when: api_check_before_pods.rc == 0
+  tags:
+    - helm
+    - status
+
+- name: Вывод статуса установки
+  ansible.builtin.debug:
+    msg:
+      - "{{ release_name }} успешно установлен!"
+      - "Namespace: {{ helm_namespace }}"
+      - "Release: {{ helm_release_name }}"
+  when: api_check_before_pods.rc == 0
+  tags:
+    - helm
+    - status
+
+- name: Вывод статуса pods
+  ansible.builtin.debug:
+    var: helm_pods_status.stdout_lines
+  when: api_check_before_pods.rc == 0 and helm_pods_status.rc == 0
+  tags:
+    - helm
+    - status
+
+- name: Получение информации о сервисах
+  ansible.builtin.command:
+    cmd: "kubectl get svc --namespace {{ helm_namespace }} --kubeconfig={{ kubeconfig_path }}"
+  register: helm_services
+  changed_when: false
+  tags:
+    - helm
+    - status
+
+- name: Вывод информации о сервисах
+  ansible.builtin.debug:
+    var: helm_services.stdout_lines
+  tags:
+    - helm
+    - status
+
+- name: Предупреждение о недоступности API сервера
+  ansible.builtin.debug:
+    msg:
+      - "ВНИМАНИЕ: API сервер недоступен после установки {{ release_name }}"
+      - "{{ release_name }} установлен через Helm, но невозможно проверить статус pods"
+      - "Проверьте статус кластера вручную: kubectl get nodes"
+      - "После восстановления API сервера проверьте: kubectl get pods -n {{ helm_namespace }}"
+  when: api_check_before_pods.rc != 0
+  tags:
+    - helm
+    - status
+

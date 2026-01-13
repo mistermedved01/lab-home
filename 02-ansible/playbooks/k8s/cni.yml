@@ -1,0 +1,9 @@
+---
+- name: Установка Flannel CNI
+  hosts: kube_control_plane
+  become: yes
+  gather_facts: yes
+
+  roles:
+    - cni
+

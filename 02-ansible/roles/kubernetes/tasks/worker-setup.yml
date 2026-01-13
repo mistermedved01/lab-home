@@ -1,0 +1,52 @@
+---
+# Присоединение worker нод к Kubernetes
+
+- name: Проверка, присоединён ли уже worker
+  ansible.builtin.stat:
+    path: "{{ kubelet_config_path | default('/etc/kubernetes/kubelet.conf') }}"
+  register: kubelet_conf
+  tags:
+    - k8s
+    - checks
+    - worker
+
+- name: Получение join command с control plane
+  ansible.builtin.command:
+    cmd: "kubeadm token create --print-join-command --kubeconfig={{ kubeconfig_path }}"
+  delegate_to: "{{ groups['kube_control_plane'][0] }}"
+  register: join_command
+  changed_when: false
+  when: not kubelet_conf.stat.exists
+  tags:
+    - k8s
+    - join
+    - worker
+
+- name: Присоединение worker ноды
+  ansible.builtin.command:
+    cmd: "{{ join_command.stdout }}"
+  when: not kubelet_conf.stat.exists
+  tags:
+    - k8s
+    - join
+    - worker
+
+- name: Проверка успешного присоединения
+  ansible.builtin.wait_for:
+    path: "{{ kubelet_config_path | default('/etc/kubernetes/kubelet.conf') }}"
+    state: present
+  when: not kubelet_conf.stat.exists
+  tags:
+    - k8s
+    - join
+    - worker
+
+- name: Вывод результата
+  ansible.builtin.debug:
+    msg: "Worker {{ inventory_hostname }} присоединён к кластеру"
+  when: (kubelet_conf.stat.exists) or (kubelet_conf.stat.exists is not defined)
+  tags:
+    - k8s
+    - info
+    - worker
+

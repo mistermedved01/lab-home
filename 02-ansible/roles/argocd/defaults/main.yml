@@ -1,0 +1,12 @@
+---
+# Переменные по умолчанию для роли argocd
+# kubeconfig_path должен быть определен в group_vars/all.yaml
+argocd_helm_release_name: "argocd"
+argocd_helm_namespace: "argocd"
+argocd_helm_repo_name: "argo"
+argocd_helm_repo_url: "https://argoproj.github.io/argo-helm"
+argocd_helm_chart_name: "argo/argo-cd"
+argocd_helm_values_file: "/tmp/argocd-values.yaml"
+argocd_release_name: "ArgoCD"
+argocd_pod_selector: "app.kubernetes.io/name=argocd-server"
+

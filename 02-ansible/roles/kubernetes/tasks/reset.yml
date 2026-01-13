@@ -1,0 +1,69 @@
+---
+# Сброс Kubernetes кластера
+
+- name: Остановка kubelet
+  ansible.builtin.systemd:
+    name: kubelet
+    state: stopped
+    enabled: no
+  ignore_errors: yes
+  tags:
+    - k8s
+    - reset
+
+- name: Сброс kubeadm (если кластер был инициализирован)
+  ansible.builtin.command:
+    cmd: kubeadm reset -f
+  ignore_errors: yes
+  register: kubeadm_reset
+  changed_when: "'reset' in kubeadm_reset.stdout or 'reset' in kubeadm_reset.stderr"
+  tags:
+    - k8s
+    - reset
+
+- name: Очистка конфигурационных файлов
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/kubernetes
+    - /var/lib/etcd
+    - /var/lib/cni
+    - /etc/cni
+    - ~/.kube
+    - "/home/{{ ansible_user }}/.kube"
+  ignore_errors: yes
+  tags:
+    - k8s
+    - reset
+
+- name: Очистка iptables правил
+  ansible.builtin.shell: |
+    iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X || true
+    ip6tables -F && ip6tables -t nat -F && ip6tables -t mangle -F && ip6tables -X || true
+  args:
+    warn: false
+  ignore_errors: yes
+  tags:
+    - k8s
+    - reset
+
+- name: Очистка сетевых интерфейсов
+  ansible.builtin.shell: |
+    ip link delete cni0 2>/dev/null || true
+    ip link delete flannel.1 2>/dev/null || true
+  args:
+    warn: false
+  ignore_errors: yes
+  tags:
+    - k8s
+    - reset
+
+- name: Результат сброса
+  ansible.builtin.debug:
+    msg: "Кластер очищен. Можно запускать site.yml заново"
+  tags:
+    - k8s
+    - reset
+    - info
+

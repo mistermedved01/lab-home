@@ -1,0 +1,21 @@
+---
+galaxy_info:
+  author: Lab Home
+  description: Ansible роль для установки Prometheus Node Exporter на Proxmox хосты
+  license: MIT
+  min_ansible_version: '2.9'
+  platforms:
+    - name: Debian
+      versions:
+        - all
+    - name: Ubuntu
+      versions:
+        - all
+  galaxy_tags:
+    - monitoring
+    - prometheus
+    - node_exporter
+    - proxmox
+
+dependencies: []
+

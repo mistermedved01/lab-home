@@ -1,0 +1,11 @@
+---
+- name: Обновление ingress для ArgoCD
+  hosts: kube_control_plane
+  become: yes
+  gather_facts: yes
+
+  roles:
+    - role: argocd
+      tasks_from: ingress
+    - role: argocd
+      tasks_from: info

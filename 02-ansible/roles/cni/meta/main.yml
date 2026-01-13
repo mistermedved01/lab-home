@@ -1,0 +1,19 @@
+---
+galaxy_info:
+  author: lab-home
+  description: |
+    CNI (Container Network Interface) installation role for Kubernetes.
+    Currently supports Flannel CNI plugin.
+    Requires Kubernetes control plane to be initialized.
+  license: MIT
+  min_ansible_version: "2.9"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - focal
+        - jammy
+
+dependencies:
+  - role: kubernetes
+  - role: helm
+

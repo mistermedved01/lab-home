@@ -1,0 +1,94 @@
+---
+# Вывод информации о ArgoCD после установки
+
+- name: Получение начального пароля администратора
+  ansible.builtin.command:
+    cmd: >
+      kubectl get secret argocd-initial-admin-secret
+      --namespace {{ argocd_helm_namespace }}
+      --kubeconfig={{ kubeconfig_path }}
+      -o jsonpath="{.data.password}"
+  register: admin_secret_password
+  failed_when: false
+  changed_when: false
+  tags:
+    - argocd
+    - info
+
+- name: Декодирование пароля администратора
+  ansible.builtin.shell: |
+    echo "{{ admin_secret_password.stdout }}" | base64 -d
+  register: admin_password_decoded
+  failed_when: false
+  changed_when: false
+  when:
+    - admin_secret_password.stdout is defined
+    - admin_secret_password.stdout != ""
+  tags:
+    - argocd
+    - info
+
+- name: Установка декодированного пароля в переменную
+  ansible.builtin.set_fact:
+    admin_password: "{{ admin_password_decoded.stdout_lines[0] | default(admin_password_decoded.stdout | default('')) }}"
+  when:
+    - admin_secret_password.stdout is defined
+    - admin_secret_password.stdout != ""
+    - admin_password_decoded.stdout is defined
+  tags:
+    - argocd
+    - info
+
+- name: Формирование URL для доступа к ArgoCD
+  ansible.builtin.set_fact:
+    argocd_url: >
+      {%- if use_port_in_url -%}
+        http://{{ argocd_domain }}:{{ ingress_nginx_http_port }}
+      {%- else -%}
+        http://{{ argocd_domain }}
+      {%- endif -%}
+  tags:
+    - argocd
+    - info
+
+- name: Вывод пароля администратора
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "Данные для входа в ArgoCD:"
+      - "=========================================="
+      - "Логин: admin"
+      - "Пароль: {{ admin_password }}"
+      - ""
+      - "Для доступа через ingress:"
+      - "  {{ argocd_url }}"
+      - ""
+      - "Для доступа через port-forward:"
+      - "  kubectl port-forward svc/argocd-server -n {{ argocd_helm_namespace }} 8080:443"
+      - "  Затем откройте: https://localhost:8080"
+      - ""
+      - "Примечание: Убедитесь, что DNS настроен для {{ argocd_domain }}"
+      - "  Если DNS настроен на стандартный порт 80, установите use_port_in_url: false"
+      - "  в файле group_vars/all/main.yml"
+      - "=========================================="
+  when:
+    - admin_secret_password.stdout is defined
+    - admin_secret_password.stdout != ""
+    - admin_password is defined
+    - admin_password != ""
+  tags:
+    - argocd
+    - info
+
+- name: Предупреждение, если пароль еще не создан
+  ansible.builtin.debug:
+    msg:
+      - "Пароль администратора еще не создан."
+      - "Подождите несколько секунд и выполните:"
+      - "kubectl -n {{ argocd_helm_namespace }} get secret argocd-initial-admin-secret -o jsonpath=\"{.data.password}\" | base64 -d"
+  when:
+    - (admin_secret_password.stdout is not defined) or (admin_secret_password.stdout | default('') == "")
+  tags:
+    - argocd
+    - info
+

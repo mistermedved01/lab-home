@@ -1,0 +1,26 @@
+---
+# Общие задачи для проверки доступности API сервера после инициализации
+
+- name: Ожидание доступности API сервера
+  ansible.builtin.wait_for:
+    host: "{{ control_plane_ip }}"
+    port: 6443
+    timeout: 300
+  tags:
+    - checks
+    - k8s
+    - api
+
+- name: Проверка доступа к кластеру
+  ansible.builtin.command:
+    cmd: "kubectl get nodes --kubeconfig={{ kubeconfig_path }}"
+  register: kubectl_nodes_check
+  retries: 20
+  delay: 10
+  until: kubectl_nodes_check.rc == 0
+  changed_when: false
+  tags:
+    - checks
+    - k8s
+    - api
+

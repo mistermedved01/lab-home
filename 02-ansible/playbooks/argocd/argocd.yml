@@ -1,0 +1,9 @@
+---
+- name: Установка ArgoCD через Helm
+  hosts: kube_control_plane
+  become: yes
+  gather_facts: yes
+
+  roles:
+    - argocd
+

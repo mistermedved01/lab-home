@@ -1,0 +1,9 @@
+---
+- name: Подготовка нод Kubernetes
+  hosts: k8s_cluster
+  become: yes
+  gather_facts: yes
+
+  roles:
+    - common
+

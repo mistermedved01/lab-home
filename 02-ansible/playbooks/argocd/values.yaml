@@ -1,0 +1,83 @@
+# ArgoCD Helm Chart Values
+# Документация: https://github.com/argoproj/argo-helm/tree/main/charts/argo-cd
+
+# Настройки сервера ArgoCD
+server:
+  # Количество реплик
+  replicas: 1
+  
+  # Настройки ingress (требует ingress-nginx)
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    # Домен для доступа к ArgoCD
+    # Примечание: домен настраивается через переменную argocd_domain в group_vars/all/main.yml
+    # и переопределяется через --set при установке/обновлении через Ansible playbook
+    hosts:
+      - argocd.lab-home.com
+    # Аннотации для работы ArgoCD через ingress-nginx (HTTP режим)
+    annotations:
+      # Отключаем SSL redirect для работы через HTTP
+      nginx.ingress.kubernetes.io/ssl-redirect: "false"
+      # Используем HTTP для backend (ArgoCD будет работать в insecure режиме)
+      nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+
+  # Ресурсы
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+
+# Настройки контроллера
+controller:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# Настройки repo server
+repoServer:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+# Настройки applicationSet controller
+applicationSet:
+  enabled: true
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+# Настройки Redis
+redis:
+  enabled: true
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+# Включаем insecure режим для работы через HTTP (только для тестовой среды!)
+configs:
+  params:
+    server.insecure: "true"
+

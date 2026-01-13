@@ -1,0 +1,91 @@
+---
+# ArgoCD Application для Rancher
+# Rancher - платформа управления Kubernetes кластерами
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rancher
+  namespace: argocd
+  # Финализаторы для корректного удаления
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  
+  # Источник - Helm chart из официального репозитория Rancher
+  source:
+    repoURL: https://releases.rancher.com/server-charts/stable
+    chart: rancher
+    targetRevision: "2.13.0"
+    helm:
+      # Inline values (основные параметры)
+      values: |
+        hostname: rancher.lab-home.com
+        replicas: 1
+        ingress:
+          enabled: true
+          ingressClassName: nginx
+          annotations:
+            cert-manager.io/cluster-issuer: "selfsigned-issuer"
+            nginx.ingress.kubernetes.io/ssl-redirect: "true"
+            nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+            nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+            # Аннотация для совместимости со старыми версиями ingress-nginx
+            kubernetes.io/ingress.class: nginx
+          tls:
+            enabled: true
+            source: secret
+            secretName: rancher-tls
+        # Используем cert-manager для управления сертификатами
+        certmanager:
+          enabled: false  # Используем внешний cert-manager
+        certManager:
+          enabled: false  # Используем внешний cert-manager
+        antiAffinity: preferred
+        resources:
+          limits:
+            cpu: 2000m
+            memory: 2Gi
+          requests:
+            cpu: 1000m
+            memory: 1Gi
+        useBundledSystemChart: true
+        # Настройки для HTTPS режима
+        extraEnv:
+          - name: CATTLE_SERVER_URL
+            value: https://rancher.lab-home.com
+        global:
+          cattle:
+            ssl:
+              fqdn: rancher.lab-home.com
+        telemetry:
+          enabled: false
+      
+      # Альтернативный вариант: использовать values файл из Git репозитория
+      # Для этого нужно настроить Git репозиторий в ArgoCD и использовать:
+      # valueFiles:
+      #   - $repo/03-argocd/rancher/values.yaml
+  
+  # Назначение - текущий кластер, namespace cattle-system
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cattle-system
+  
+  # Политика синхронизации
+  syncPolicy:
+    # Автоматическая синхронизация
+    automated:
+      prune: true      # Удалять ресурсы, которых нет в Git
+      selfHeal: true   # Автоматически исправлять отклонения
+      allowEmpty: false # Не разрешать пустые синхронизации
+    # Автоматическое создание namespace, если его нет
+    syncOptions:
+      - CreateNamespace=true
+    # Retry при ошибках
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+
