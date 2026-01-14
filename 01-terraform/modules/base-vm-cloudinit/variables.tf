@@ -155,7 +155,7 @@ variable "iso_image" {
   default     = null
 
   validation {
-    condition     = var.iso_image == null || length(var.iso_image) > 0
+    condition     = var.iso_image == null || try(length(var.iso_image) > 0, false)
     error_message = "iso_image не может быть пустой строкой (используйте null для отключения)"
   }
 }

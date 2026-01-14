@@ -59,13 +59,13 @@ resource "proxmox_virtual_environment_vm" "vm-cloudinit" {
   # ========================================================================
   # Диск
   # ========================================================================
-  # Настройка диска VM. Диск создается из ISO образа.
+  # Настройка диска VM. Диск создается из cloud image.
   # 
   # Параметры:
   # - iothread: улучшает производительность I/O для виртуализированных дисков
   # - discard: включает TRIM для SSD (рекомендуется для SSD хранилищ)
   # - file_format: raw для лучшей производительности, qcow2 для экономии места
-  # - file_id: путь к ISO образу в datastore (например, local:iso/image.img)
+  # - file_id: путь к cloud image в datastore (например, local:iso/image.img)
   # ========================================================================
   disk {
     datastore_id = var.disk_datastore_id
@@ -75,6 +75,19 @@ resource "proxmox_virtual_environment_vm" "vm-cloudinit" {
     discard      = "on"
     file_format  = "raw"
     file_id      = var.iso_image != null ? var.iso_image : null
+  }
+
+  # ========================================================================
+  # EFI загрузка
+  # ========================================================================
+  # Настройка EFI загрузки для cloud images. Cloud images Ubuntu требуют
+  # EFI загрузку для правильной работы.
+  # ========================================================================
+  efi_disk {
+    datastore_id = var.disk_datastore_id
+    file_format  = "raw"
+    type         = "4m"
+    pre_enrolled_keys = true
   }
 
   # ========================================================================
