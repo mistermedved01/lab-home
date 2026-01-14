@@ -1,22 +1,8 @@
-# Lab Home
+# 🏠lab-home
 
 ## О проекте
 
-**Lab Home** — это комплексная система для автоматизированного развертывания и управления Kubernetes кластером на базе Proxmox VE. Проект реализует полный цикл создания инфраструктуры: от виртуальных машин до работающих приложений, используя современные подходы Infrastructure as Code и GitOps.
-
-### Назначение
-
-Проект предназначен для:
-- Автоматизации создания и настройки Kubernetes кластера
-- Управления инфраструктурой через декларативные конфигурации
-- Развертывания приложений по принципам GitOps
-- Создания воспроизводимой и масштабируемой инфраструктуры
-
-### Целевая аудитория
-
-- DevOps инженеры, настраивающие Kubernetes инфраструктуру
-- Системные администраторы, автоматизирующие развертывание
-- Разработчики, изучающие практики IaC и GitOps
+**lab-home** - это домашняя платформа для экспериментов с Kubernetes. Система автоматически поднимает виртуальные машины в Proxmox, настраивает кластер через Ansible и разворачивает приложения с помощью ArgoCD. В итоге получается полностью воспроизводимая инфраструктура, которую можно пересоздать в любой момент.
 
 ---
 
@@ -71,7 +57,185 @@ graph TB
 
 ---
 
-## Компоненты системы
+<details>
+<summary><b>🚀Быстрый старт</b></summary>
+
+### Предварительные требования
+
+Перед началом развертывания убедитесь, что у вас есть:
+
+- **Terraform** >= 1.0 установлен и доступен в PATH
+- **Доступ к Proxmox VE** с правами на создание виртуальных машин
+- **SSH ключ** для подключения к создаваемым VM
+- **ISO образ Ubuntu** загружен в Proxmox (например, `noble-server-cloudimg-amd64.img`)
+
+### Пошаговая инструкция
+
+#### Шаг 1: Подготовка конфигурации Terraform
+
+Заполните файл `terraform.tfvars` по примеру `terraform.tfvars.example`:
+
+```bash
+cd 01-terraform/proxmox/vm-ubuntu/live
+cp terraform.tfvars.example terraform.tfvars
+# Отредактируйте terraform.tfvars и заполните реальными значениями
+```
+
+**Важно:** Укажите корректные значения для:
+- `proxmox_endpoint` - URL вашего Proxmox API
+- `proxmox_api_token` - API токен для Terraform
+- `ssh_public_key` - ваш публичный SSH ключ
+- `vm_list` - список виртуальных машин с IP-адресами и ресурсами
+
+#### Шаг 2: Загрузка ISO образа в Proxmox
+
+В веб-интерфейсе Proxmox:
+
+1. Перейдите в **Datacenter** → выберите **node** → **local** → **ISO Images**
+2. Загрузите ISO образ (например, `noble-server-cloudimg-amd64.img`)
+3. Убедитесь, что образ доступен в хранилище, указанном в `terraform.tfvars` (обычно `local:iso/`)
+
+#### Шаг 3: Тестирование конфигурации Terraform
+
+Перед применением проверьте план развертывания:
+
+```bash
+cd 01-terraform/proxmox/vm-ubuntu/live
+
+# Инициализация Terraform (если еще не выполнено)
+terraform init
+
+# Просмотр плана изменений
+terraform plan
+```
+
+Проверьте, что план соответствует ожиданиям: количество VM, их ресурсы, IP-адреса.
+
+#### Шаг 4: Применение конфигурации Terraform
+
+Создайте виртуальные машины:
+
+```bash
+cd 01-terraform/proxmox/vm-ubuntu/live
+terraform apply
+```
+
+Terraform автоматически:
+- Создаст виртуальные машины в Proxmox
+- Настроит cloud-init конфигурации
+- Сгенерирует Ansible inventory файл
+- Скопирует файлы на Ansible Control VM (`/etc/ansible/`)
+- Скопирует ArgoCD Applications на Kubernetes control plane (`~/03-argocd/`)
+
+**Примечание:** После `terraform apply` подождите 2-3 минуты, пока VM полностью загрузятся и станут доступны по SSH. Terraform скрипты автоматически ожидают готовности хостов.
+
+#### Шаг 5: Развертывание Kubernetes кластера через Ansible
+
+Подключитесь к Ansible Control VM и запустите главный playbook:
+
+```bash
+# Подключение к Ansible Control VM
+# IP-адрес можно получить из terraform output или из terraform.tfvars
+ssh -i 01-terraform/proxmox/vm-ubuntu/live/keys/id_ed25519 ubuntu@<ANSIBLE_CONTROL_IP>
+
+# Переход в директорию с playbooks
+cd /etc/ansible/playbooks
+
+# Запуск главного playbook
+ansible-playbook site.yml -i inventory/prod/hosts.yaml
+```
+
+Playbook выполнит автоматически:
+1. Базовую настройку всех узлов кластера
+2. Инициализацию Kubernetes control plane
+3. Установку CNI (Flannel)
+4. Присоединение worker nodes
+5. Установку Helm
+6. Установку ingress-nginx
+7. Установку ArgoCD
+
+**Важно:** После завершения playbook автоматически выведет:
+- Логин и пароль для доступа к ArgoCD (логин: `admin`)
+- URL для доступа к ArgoCD через ingress
+
+#### Шаг 6: Настройка DNS и доступ к ArgoCD
+
+Для доступа к ArgoCD через веб-интерфейс необходимо настроить DNS на вашей машине:
+
+**Windows** (`C:\Windows\System32\drivers\etc\hosts`):
+```
+<IP-адрес_k8s-control-01> argocd.lab-home.com
+```
+
+**Linux/macOS** (`/etc/hosts`):
+```
+<IP-адрес_k8s-control-01> argocd.lab-home.com
+```
+
+Замените `<IP-адрес_k8s-control-01>` на реальный IP-адрес вашего Kubernetes control plane узла (например, `192.168.40.145`)
+
+**Примечание:** Если вы планируете развертывать дополнительные приложения через ArgoCD, добавьте их домены в hosts файл:
+
+**Windows** (`C:\Windows\System32\drivers\etc\hosts`):
+
+**Linux/macOS** (`/etc/hosts`):
+```
+<IP-адрес_k8s-control-01> argocd.lab-home.com
+<IP-адрес_k8s-control-01> rancher.lab-home.com
+<IP-адрес_k8s-control-01> gitlab.lab-home.com
+<IP-адрес_k8s-control-01> homepage.lab-home.com
+<IP-адрес_k8s-control-01> grafana.lab-home.com
+```
+
+После настройки DNS откройте в браузере:
+```
+https://argocd.lab-home.com:30443/
+```
+
+Используйте учетные данные, выведенные при выполнении Ansible playbook (логин: `admin`, пароль из вывода playbook).
+
+#### Шаг 7: Развертывание ArgoCD Applications
+
+Подключитесь к Kubernetes control plane и примените манифесты ArgoCD Applications:
+
+```bash
+# Подключение к k8s-control-01
+ssh -i 01-terraform/proxmox/vm-ubuntu/live/keys/id_ed25519 ubuntu@<K8S_CONTROL_IP>
+
+# Применение манифестов (начинаем с cert-manager, так как он требуется для TLS)
+cd ~/03-argocd/cert-manager
+kubectl apply -f cert-manager.yaml
+
+# Применение остальных Applications (опционально, можно применить все сразу)
+kubectl apply -f ~/03-argocd/cert-manager/clusterissuer-selfsigned.yaml
+kubectl apply -f ~/03-argocd/cert-manager/clusterissuer-application.yaml
+```
+
+**Примечание:** ArgoCD Applications автоматически копируются Terraform в директорию `~/03-argocd/` на k8s-control-01. Вы можете применить их все сразу или по отдельности в зависимости от ваших потребностей.
+
+### Проверка результата
+
+После выполнения всех шагов у вас должен быть:
+
+- ✅ Работающий Kubernetes кластер
+- ✅ ArgoCD доступен по адресу `https://argocd.lab-home.com:30443/`
+- ✅ Ingress Controller настроен и работает
+- ✅ ArgoCD Applications готовы к применению
+
+Для проверки состояния кластера:
+```bash
+# На k8s-control-01
+kubectl get nodes
+kubectl get pods -A
+kubectl get ingress -A
+```
+
+</details>
+
+---
+
+<details>
+<summary><b>📦Компоненты системы</b></summary>
 
 ### 1. Terraform (01-terraform)
 
@@ -154,52 +318,19 @@ graph TB
 - Поддержка различных источников (Helm, Kustomize)
 - Централизованное управление TLS через cert-manager
 
+</details>
+
 ---
 
-## Жизненный цикл развертывания
+<details>
+<summary><b>🔄Жизненный цикл развертывания</b></summary>
 
-Процесс развертывания проходит через последовательные этапы, где каждый этап подготавливает основу для следующего:
-
-```mermaid
-sequenceDiagram
-    participant User as Пользователь
-    participant TF as Terraform
-    participant PVE as Proxmox VE
-    participant VM as Виртуальные машины
-    participant Ansible as Ansible Control VM
-    participant K8s as Kubernetes Cluster
-    participant ArgoCD as ArgoCD
-    participant Apps as Приложения
-    
-    User->>TF: terraform apply
-    TF->>PVE: Создание VM через API
-    PVE-->>VM: Запуск виртуальных машин
-    VM-->>VM: Cloud-init настройка
-    
-    TF->>TF: Генерация Ansible inventory
-    TF->>Ansible: Копирование playbooks, roles, inventory
-    TF->>K8s: Копирование ArgoCD Applications
-    
-    User->>Ansible: Запуск Ansible playbooks
-    Ansible->>VM: Базовая настройка нод (common)
-    Ansible->>VM: Инициализация control plane
-    Ansible->>VM: Установка CNI
-    Ansible->>VM: Присоединение worker nodes
-    Ansible->>K8s: Установка Helm
-    Ansible->>K8s: Установка ingress-nginx
-    Ansible->>K8s: Установка ArgoCD
-    
-    User->>K8s: Применение ArgoCD Applications
-    K8s->>ArgoCD: Регистрация Applications
-    ArgoCD->>K8s: Развертывание cert-manager
-    ArgoCD->>K8s: Развертывание приложений
-    K8s-->>Apps: Работающие приложения
-```
+Процесс развертывания проходит через последовательные этапы, где каждый этап подготавливает основу для следующего.
 
 ### Этапы развертывания
 
 #### Этап 1: Создание инфраструктуры (Terraform)
-- Определение конфигурации VM в `terraform.tfvars`
+- Определение конфигурации VM в `01-terraform/proxmox/vm-ubuntu/live/terraform.tfvars`
 - Выполнение `terraform apply`
 - Создание виртуальных машин в Proxmox
 - Автоматическая настройка через cloud-init
@@ -220,178 +351,27 @@ sequenceDiagram
 - Автоматическая настройка TLS сертификатов
 - Мониторинг состояния через ArgoCD UI
 
----
-
-## Архитектура Kubernetes кластера
-
-### Структура кластера
-
-Кластер состоит из следующих компонентов:
-
-```mermaid
-graph TB
-    subgraph "Control Plane"
-        CP1[Control Plane Node 1<br/>kube-apiserver<br/>etcd<br/>kube-scheduler<br/>kube-controller-manager]
-    end
-    
-    subgraph "Worker Nodes"
-        W1[Worker Node 1<br/>kubelet<br/>kube-proxy<br/>containerd]
-        W2[Worker Node 2<br/>kubelet<br/>kube-proxy<br/>containerd]
-        WN[Worker Node N...]
-    end
-    
-    subgraph "Инфраструктурные компоненты"
-        CNI[CNI Plugin<br/>Flannel]
-        Ingress[Ingress Controller<br/>ingress-nginx]
-        Helm[Helm<br/>Package Manager]
-    end
-    
-    subgraph "GitOps и управление"
-        ArgoCD[ArgoCD<br/>GitOps Controller]
-    end
-    
-    subgraph "Приложения"
-        CertMgr[cert-manager<br/>TLS Certificates]
-        GitLab[GitLab<br/>CI/CD Platform]
-        Rancher[Rancher<br/>K8s Management]
-        Prometheus[Prometheus Stack<br/>Monitoring & Alerting]
-        Homepage[Homepage<br/>Dashboard]
-    end
-    
-    CP1 <--> CNI
-    CP1 <--> W1
-    CP1 <--> W2
-    CP1 <--> WN
-    
-    CNI --> W1
-    CNI --> W2
-    CNI --> WN
-    
-    Ingress --> W1
-    Ingress --> W2
-    Ingress --> WN
-    
-    ArgoCD --> CertMgr
-    ArgoCD --> GitLab
-    ArgoCD --> Rancher
-    ArgoCD --> Prometheus
-    ArgoCD --> Homepage
-    
-    CertMgr -.->|TLS| GitLab
-    CertMgr -.->|TLS| Rancher
-    CertMgr -.->|TLS| Prometheus
-    CertMgr -.->|TLS| Homepage
-    
-    style CP1 fill:#326CE5,color:#fff
-    style ArgoCD fill:#EF7B4D,color:#fff
-    style CertMgr fill:#3B82F6,color:#fff
-```
-
-### Компоненты кластера
-
-#### Инфраструктурные компоненты
-
-1. **CNI (Flannel)**
-   - Обеспечивает сетевую связность между подами
-   - Использует VXLAN для создания overlay сети
-   - Необходим для работы кластера
-
-2. **Ingress Controller (ingress-nginx)**
-   - Маршрутизация внешнего трафика в кластер
-   - Управление входящими HTTP/HTTPS соединениями
-   - Интеграция с cert-manager для автоматического TLS
-
-3. **Helm**
-   - Пакетный менеджер для Kubernetes
-   - Упрощает установку и управление приложениями
-   - Используется для развертывания большинства компонентов
-
-#### Приложения
-
-1. **cert-manager**
-   - Автоматическое управление TLS сертификатами
-   - Интеграция с различными провайдерами (Let's Encrypt, self-signed)
-   - Централизованное управление сертификатами для всех приложений
-
-2. **GitLab**
-   - CI/CD платформа и управление репозиториями
-   - Интеграция с Kubernetes для деплоя
-   - Управление исходным кодом и артефактами
-
-3. **Rancher**
-   - Платформа управления Kubernetes кластерами
-   - Упрощенный интерфейс для управления кластером
-   - Мультикластерное управление
-
-4. **Prometheus Stack**
-   - Сбор метрик (Prometheus)
-   - Визуализация (Grafana)
-   - Алертинг (Alertmanager)
-   - Мониторинг кластера и приложений
-
-5. **Homepage**
-   - Современный дашборд для самохостинга
-   - Единая точка доступа к приложениям
-   - Навигация по сервисам
+</details>
 
 ---
 
-## Принципы проектирования
-
-### Infrastructure as Code (IaC)
-
-Вся инфраструктура описывается декларативно в виде кода:
-- **Версионирование:** все изменения отслеживаются в Git
-- **Воспроизводимость:** идентичная инфраструктура может быть создана многократно
-- **Документированность:** код служит документацией
-- **Тестируемость:** возможность проверки изменений перед применением
-
-### GitOps подход
-
-Управление приложениями через Git репозиторий:
-- **Декларативность:** желаемое состояние описывается в манифестах
-- **Автоматизация:** ArgoCD автоматически синхронизирует состояние
-- **Прозрачность:** все изменения видны в Git истории
-- **Откат изменений:** простое возвращение к предыдущему состоянию
-
-### Модульность и переиспользование
-
-Компоненты системы организованы как переиспользуемые модули:
-- **Terraform модули:** переиспользование конфигураций VM
-- **Ansible roles:** изолированная логика для каждого компонента
-- **Helm charts:** стандартизированное развертывание приложений
-- **Разделение ответственности:** каждый компонент решает свою задачу
-
-### Разделение ответственности
-
-Четкое разделение между этапами:
-- **Terraform:** создание инфраструктуры
-- **Ansible:** конфигурация и настройка
-- **ArgoCD:** управление приложениями
-- Каждый инструмент используется для своей области компетенции
-
-### Идемпотентность
-
-Операции могут выполняться многократно с одинаковым результатом:
-- Ansible playbooks идемпотентны по своей природе
-- Terraform отслеживает состояние и применяет только изменения
-- ArgoCD поддерживает желаемое состояние автоматически
-
----
-
-## Структура проекта
+<details>
+<summary><b>📁Структура проекта</b></summary>
 
 Проект организован в три основные директории, каждая из которых отвечает за свой этап развертывания:
 
 ```
 lab-home/
 ├── 01-terraform/          # Создание инфраструктуры
-│   ├── live/              # Конфигурация для конкретного окружения
-│   │   ├── main.tf        # Основная конфигурация
-│   │   ├── variables.tf   # Определение переменных
-│   │   ├── scripts/       # Скрипты копирования файлов
-│   │   └── templates/     # Шаблоны для генерации конфигураций
-│   └── modules/           # Переиспользуемые Terraform модули
+│   └── proxmox/           # Провайдер Proxmox
+│       └── vm-ubuntu/     # Конфигурация для Ubuntu VM
+│           ├── live/     # Конфигурация для конкретного окружения
+│           │   ├── main.tf        # Основная конфигурация
+│           │   ├── variables.tf   # Определение переменных
+│           │   ├── scripts/       # Скрипты копирования файлов
+│           │   └── templates/     # Шаблоны для генерации конфигураций
+│           └── modules/           # Переиспользуемые Terraform модули
+│               └── base-vm-cloudinit/  # Модуль создания VM с cloud-init
 │
 ├── 02-ansible/            # Конфигурация и развертывание
 │   ├── inventory/         # Inventory файлы по окружениям
@@ -406,13 +386,12 @@ lab-home/
 │   │   └── argocd/        # ArgoCD развертывание
 │   └── roles/             # Ansible roles (логика компонентов)
 │
-└── 03-argocd/# Управление приложениями
-    └── applications/      # ArgoCD Application манифесты
-        ├── cert-manager/  # TLS сертификаты
-        ├── gitlab/        # GitLab CI/CD
-        ├── rancher/       # Rancher управление
-        ├── prometheus-stack/# Мониторинг
-        └── homepage/      # Дашборд
+└── 03-argocd/            # Управление приложениями
+    ├── cert-manager/     # TLS сертификаты
+    ├── gitlab/           # GitLab CI/CD
+    ├── rancher/          # Rancher управление
+    ├── prometheus-stack/ # Мониторинг
+    └── homepage/         # Дашборд
 ```
 
 ### Логическая организация
@@ -432,55 +411,12 @@ lab-home/
    - Управление жизненным циклом
    - Автоматизация развертывания
 
+</details>
+
 ---
 
-## Потоки данных
-
-### Передача конфигураций между этапами
-
-```mermaid
-graph LR
-    subgraph "Источники данных"
-        TFVars[terraform.tfvars<br/>Конфигурация VM]
-        GroupVars[group_vars/<br/>Ansible переменные]
-        AppManifests[Application манифесты<br/>ArgoCD]
-    end
-    
-    subgraph "Terraform"
-        TFGen[Terraform<br/>Генерация]
-        Inventory[Ansible Inventory<br/>hosts.yaml]
-    end
-    
-    subgraph "Ansible Control VM"
-        AnsibleFiles[Playbooks, Roles,<br/>Inventory, Variables]
-    end
-    
-    subgraph "Kubernetes Control Plane"
-        ArgoCDApps[ArgoCD Applications<br/>Манифесты]
-    end
-    
-    subgraph "Kubernetes Cluster"
-        K8sConfig[Конфигурация<br/>кластера]
-        Apps[Приложения]
-    end
-    
-    TFVars --> TFGen
-    TFGen --> Inventory
-    TFGen -->|Скрипт| AnsibleFiles
-    TFGen -->|Скрипт| ArgoCDApps
-    
-    GroupVars --> AnsibleFiles
-    AnsibleFiles -->|Ansible playbooks| K8sConfig
-    
-    AppManifests --> ArgoCDApps
-    ArgoCDApps -->|ArgoCD sync| Apps
-    
-    style TFGen fill:#623CE4,color:#fff
-    style AnsibleFiles fill:#EE0000,color:#fff
-    style ArgoCDApps fill:#EF7B4D,color:#fff
-```
-
-### Автоматизация передачи данных
+<details>
+<summary><b>⚡Автоматизация передачи данных</b></summary>
 
 1. **Terraform → Ansible**
    - Автоматическая генерация inventory на основе созданных VM
@@ -501,31 +437,6 @@ graph LR
    - Автоматическая синхронизация состояния приложений
    - Управление зависимостями между приложениями
 
-### Конфигурационные файлы
-
-**Источники конфигурации:**
-- `terraform.tfvars` — параметры инфраструктуры
-- `group_vars/*.yaml` — переменные Ansible для групп хостов
-- `values.yaml` — параметры Helm charts
-- Application манифесты — декларативное описание приложений
-
-**Автоматическая генерация:**
-- Ansible inventory генерируется Terraform на основе `vm_list`
-- Cloud-init конфигурации создаются из шаблонов
-- Конфигурации передаются автоматически через скрипты
-
----
-
-## Заключение
-
-Проект **Lab Home** представляет собой комплексное решение для автоматизированного развертывания Kubernetes инфраструктуры, объединяющее лучшие практики Infrastructure as Code и GitOps. Архитектура системы обеспечивает:
-
-- **Полную автоматизацию** процесса развертывания
-- **Воспроизводимость** инфраструктуры
-- **Масштабируемость** и возможность расширения
-- **Управляемость** через декларативные конфигурации
-- **Надежность** через идемпотентные операции
-
-Каждый компонент системы решает свою задачу, а их интеграция обеспечивает плавный переход от создания виртуальных машин до работающих приложений в Kubernetes кластере.
+</details>
 
 ---
