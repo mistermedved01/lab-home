@@ -8,40 +8,41 @@ metadata:
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: "1"  # Синхронизировать после minio-operator (wave 0)
-  # Финализаторы для корректного удаления
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   
-  # Источник - репозиторий Git с манифестами
-  # ВАЖНО: Укажите URL вашего Git репозитория
+  # Источник - репозиторий Git с манифестами Tenant
   source:
     repoURL: https://github.com/mistermedved01/lab-home.git
     targetRevision: HEAD
-    path: 03-argocd/minio
-    # Используем Directory для применения YAML файлов из директории
+    path: 03-argocd/minio/tenant
     directory:
       recurse: false
-      # Включаем только файл minio-tenant.yaml
-      include: minio-tenant.yaml
+      include: "*.yaml"  # Включаем tenant.yaml и ingress.yaml
   
   # Назначение - текущий кластер, namespace minio-operator
   destination:
     server: https://kubernetes.default.svc
     namespace: minio-operator
   
+  # Игнорировать изменения статуса LoadBalancer (External IP остается pending без LoadBalancer провайдера)
+  # Это убирает статус "Progressing" для сервисов minio и minio-tenant-console
+  ignoreDifferences:
+    - group: ""
+      kind: Service
+      jsonPointers:
+        - /status/loadBalancer
+  
   # Политика синхронизации
   syncPolicy:
-    # Автоматическая синхронизация
     automated:
-      prune: true      # Удалять ресурсы, которых нет в Git
-      selfHeal: true   # Автоматически исправлять отклонения
-      allowEmpty: false # Не разрешать пустые синхронизации
-    # Автоматическое создание namespace, если его нет
+      prune: true
+      selfHeal: true
+      allowEmpty: false
     syncOptions:
       - CreateNamespace=true
-    # Retry при ошибках
     retry:
       limit: 5
       backoff:

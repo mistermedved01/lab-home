@@ -29,6 +29,9 @@
    kubectl apply -f 03-argocd/rancher/rancher.yaml
    kubectl apply -f 03-argocd/prometheus-stack/prometheus-stack.yaml
    kubectl apply -f 03-argocd/homepage/homepage.yaml
+   kubectl apply -f 03-argocd/minio/minio-operator.yaml
+   # После готовности Operator, развернуть Tenant:
+   kubectl apply -f 03-argocd/minio/minio-tenant-app.yaml
    ```
 
 📋**Детальные инструкции:** см. README каждого приложения в `applications/`
@@ -65,6 +68,10 @@
 │   │   ├── ingress.yaml
 │   │   ├── configmap.yaml
 │   │   └── namespace.yaml
+│   └── README.md                      # Документация
+├── minio/
+│   ├── minio-operator.yaml            # ArgoCD Application (Helm)
+│   ├── minio-tenant.yaml              # MinIO Tenant CRD
 │   └── README.md                      # Документация
 └── README.md                          # Этот файл
 ```
@@ -159,6 +166,16 @@ CI/CD платформа и управление репозиториями (о�
 - **URL**: `https://homepage.lab-home.com`
 - **Документация**: [`applications/homepage/README.md`](applications/homepage/README.md)
 
+### MinIO
+
+S3-совместимое объектное хранилище для работы с Buckets в Rancher.
+
+- **Файл**: `applications/minio/minio-operator.yaml`
+- **Namespace**: `minio-operator`
+- **Тип**: Helm chart (Operator) + CRD (Tenant)
+- **URL**: `https://minio.lab-home.com` (Console)
+- **Документация**: [`applications/minio/README.md`](applications/minio/README.md)
+
 </details>
 
 <details>
@@ -185,6 +202,9 @@ kubectl apply -f 03-argocd/prometheus-stack/prometheus-stack.yaml
 
 # Homepage
 kubectl apply -f 03-argocd/homepage/homepage.yaml
+
+# MinIO Operator
+kubectl apply -f 03-argocd/minio/minio-operator.yaml
 ```
 
 **Применение всех Applications:**
@@ -263,6 +283,9 @@ kubectl apply -f 03-argocd/prometheus-stack/prometheus-stack.yaml
 
 # Homepage
 kubectl apply -f 03-argocd/homepage/homepage.yaml
+
+# MinIO Operator
+kubectl apply -f 03-argocd/minio/minio-operator.yaml
 ```
 
 **Если приложение развернуто до ClusterIssuer:**
@@ -281,6 +304,9 @@ kubectl delete secret grafana-tls grafana-tls-ca grafana-tls-chain -n monitoring
 
 # Для Homepage
 kubectl delete secret homepage-tls homepage-tls-ca homepage-tls-chain -n homepage
+
+# Для MinIO Console
+kubectl delete secret minio-console-tls minio-console-tls-ca minio-console-tls-chain -n minio-operator
 
 # cert-manager автоматически создаст новые секреты
 # Проверить статус Certificate
