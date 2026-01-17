@@ -20,7 +20,7 @@ spec:
     path: 03-argocd/minio1/tenant
     directory:
       recurse: false
-      include: tenant.yaml
+      include: "*.yaml"  # Включаем tenant.yaml и ingress.yaml
   
   # Назначение - текущий кластер, namespace minio-operator
   destination:

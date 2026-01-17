@@ -1,0 +1,32 @@
+---
+# Ingress для MinIO Tenant Console
+# Tenant Console поддерживает вход с Access Key / Secret Key
+# В отличие от Operator Console, который требует только JWT Token
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: minio-tenant-console
+  namespace: minio-operator
+  annotations:
+    cert-manager.io/cluster-issuer: "selfsigned-issuer"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    kubernetes.io/ingress.class: nginx
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - minio.lab-home.com
+      secretName: minio-tenant-console-tls
+  rules:
+    - host: minio.lab-home.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: minio-tenant-console
+                port:
+                  number: 9443
