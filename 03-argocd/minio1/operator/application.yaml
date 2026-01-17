@@ -1,0 +1,84 @@
+---
+# ArgoCD Application для MinIO Operator
+# Развертывает MinIO Operator через Helm chart
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: minio-operator
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  
+  # Источник - Helm chart из официального репозитория MinIO Operator
+  source:
+    repoURL: https://operator.min.io/
+    chart: operator
+    targetRevision: "5.0.18"
+    helm:
+      values: |
+        namespace: minio-operator
+        
+        # MinIO Console (веб-интерфейс)
+        console:
+          enabled: true
+          replicas: 1
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          # Ingress для MinIO Operator Console (требует JWT Token)
+          ingress:
+            enabled: true
+            ingressClassName: nginx
+            annotations:
+              cert-manager.io/cluster-issuer: "selfsigned-issuer"
+              nginx.ingress.kubernetes.io/ssl-redirect: "true"
+              nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+              nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+              kubernetes.io/ingress.class: nginx
+            hosts:
+              - minio-operator.lab-home.com
+            tls:
+              - secretName: minio-operator-console-tls
+                hosts:
+                  - minio-operator.lab-home.com
+        
+        # MinIO Operator
+        operator:
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+        
+        # MinIO KES (Key Encryption Service) - отключен
+        kes:
+          enabled: false
+  
+  # Назначение - текущий кластер, namespace minio-operator
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: minio-operator
+  
+  # Политика синхронизации
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - SkipCRDs=false  # Установить CRDs для MinIO Operator
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

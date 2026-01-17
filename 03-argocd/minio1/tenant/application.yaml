@@ -1,0 +1,43 @@
+---
+# ArgoCD Application для MinIO Tenant
+# Управляет MinIO Tenant через GitOps
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: minio-tenant
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"  # Синхронизировать после minio-operator (wave 0)
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  
+  # Источник - репозиторий Git с манифестами Tenant
+  source:
+    repoURL: https://github.com/mistermedved01/lab-home.git
+    targetRevision: HEAD
+    path: 03-argocd/minio1/tenant
+    directory:
+      recurse: false
+      include: tenant.yaml
+  
+  # Назначение - текущий кластер, namespace minio-operator
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: minio-operator
+  
+  # Политика синхронизации
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
