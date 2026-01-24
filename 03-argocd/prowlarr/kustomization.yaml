@@ -1,0 +1,16 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: prowlarr
+
+resources:
+  - base/namespace.yaml
+  - base/pvc.yaml
+  - base/deployment.yaml
+  - base/service.yaml
+  - base/ingress.yaml
+
+commonLabels:
+  app: prowlarr
+  managed-by: argocd
