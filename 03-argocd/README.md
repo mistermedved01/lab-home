@@ -30,6 +30,8 @@
    kubectl apply -f 03-argocd/prometheus-stack/prometheus-stack.yaml
    kubectl apply -f 03-argocd/homepage/homepage.yaml
    kubectl apply -f 03-argocd/jellyfin/jellyfin.yaml
+   kubectl apply -f 03-argocd/prowlarr/prowlarr.yaml
+   kubectl apply -f 03-argocd/radarr/radarr.yaml
    kubectl apply -f 03-argocd/minio/minio-operator.yaml
    # После готовности Operator, развернуть Tenant:
    kubectl apply -f 03-argocd/minio/minio-tenant-app.yaml
@@ -80,6 +82,26 @@
 │   │   ├── pvc.yaml
 │   │   └── namespace.yaml
 │   └── README.md                      # Документация
+├── prowlarr/
+│   ├── prowlarr.yaml                  # ArgoCD Application (Kustomize)
+│   ├── kustomization.yaml            # Kustomize конфигурация
+│   ├── base/                          # Kustomize ресурсы
+│   │   ├── deployment.yaml
+│   │   ├── service.yaml
+│   │   ├── ingress.yaml
+│   │   ├── pvc.yaml
+│   │   └── namespace.yaml
+│   └── README.md                      # Документация
+├── radarr/
+│   ├── radarr.yaml                    # ArgoCD Application (Kustomize)
+│   ├── kustomization.yaml            # Kustomize конфигурация
+│   ├── base/                          # Kustomize ресурсы
+│   │   ├── deployment.yaml
+│   │   ├── service.yaml
+│   │   ├── ingress.yaml
+│   │   ├── pvc.yaml
+│   │   └── namespace.yaml
+│   └── README.md                      # Документация
 ├── minio/
 │   ├── minio-operator.yaml            # ArgoCD Application (Helm)
 │   ├── minio-tenant.yaml              # MinIO Tenant CRD
@@ -119,7 +141,7 @@
    argocd app list
    ```
 
-6. **Git репозиторий настроен в ArgoCD** (для Homepage, Jellyfin)
+6. **Git репозиторий настроен в ArgoCD** (для Homepage, Jellyfin, Prowlarr, Radarr)
 
 </details>
 
@@ -179,13 +201,33 @@ CI/CD платформа и управление репозиториями (о�
 
 ### Jellyfin
 
-Свободный медиа-сервер для управления и потоковой передачи мультимедиа.
+Свободный медиа-сервер для управления и потоковой передачи личной коллекции мультимедиа.
 
 - **Файл**: `applications/jellyfin/jellyfin.yaml`
 - **Namespace**: `jellyfin`
 - **Тип**: Kustomize
 - **URL**: `https://jellyfin.lab-home.com`
 - **Документация**: [`applications/jellyfin/README.md`](applications/jellyfin/README.md)
+
+### Prowlarr
+
+Менеджер источников медиаконтента для организации личной коллекции видео.
+
+- **Файл**: `applications/prowlarr/prowlarr.yaml`
+- **Namespace**: `prowlarr`
+- **Тип**: Kustomize
+- **URL**: `https://prowlarr.lab-home.com`
+- **Документация**: [`applications/prowlarr/README.md`](applications/prowlarr/README.md)
+
+### Radarr
+
+Менеджер личной видеотеки для организации домашнего видео и семейных архивов.
+
+- **Файл**: `applications/radarr/radarr.yaml`
+- **Namespace**: `radarr`
+- **Тип**: Kustomize
+- **URL**: `https://radarr.lab-home.com`
+- **Документация**: [`applications/radarr/README.md`](applications/radarr/README.md)
 
 ### MinIO
 
@@ -226,6 +268,12 @@ kubectl apply -f 03-argocd/homepage/homepage.yaml
 
 # Jellyfin
 kubectl apply -f 03-argocd/jellyfin/jellyfin.yaml
+
+# Prowlarr
+kubectl apply -f 03-argocd/prowlarr/prowlarr.yaml
+
+# Radarr
+kubectl apply -f 03-argocd/radarr/radarr.yaml
 
 # MinIO Operator
 kubectl apply -f 03-argocd/minio/minio-operator.yaml
@@ -311,6 +359,12 @@ kubectl apply -f 03-argocd/homepage/homepage.yaml
 # Jellyfin
 kubectl apply -f 03-argocd/jellyfin/jellyfin.yaml
 
+# Prowlarr
+kubectl apply -f 03-argocd/prowlarr/prowlarr.yaml
+
+# Radarr
+kubectl apply -f 03-argocd/radarr/radarr.yaml
+
 # MinIO Operator
 kubectl apply -f 03-argocd/minio/minio-operator.yaml
 ```
@@ -334,6 +388,12 @@ kubectl delete secret homepage-tls homepage-tls-ca homepage-tls-chain -n homepag
 
 # Для Jellyfin
 kubectl delete secret jellyfin-tls jellyfin-tls-ca jellyfin-tls-chain -n jellyfin
+
+# Для Prowlarr
+kubectl delete secret prowlarr-tls prowlarr-tls-ca prowlarr-tls-chain -n prowlarr
+
+# Для Radarr
+kubectl delete secret radarr-tls radarr-tls-ca radarr-tls-chain -n radarr
 
 # Для MinIO Console
 kubectl delete secret minio-console-tls minio-console-tls-ca minio-console-tls-chain -n minio-operator
@@ -365,6 +425,8 @@ graph TB
         Prometheus[Prometheus Stack<br/>Monitoring]
         Homepage[Homepage<br/>Dashboard]
         Jellyfin[Jellyfin<br/>Media Server]
+        Prowlarr[Prowlarr<br/>Indexer Manager]
+        Radarr[Radarr<br/>Movie Manager]
     end
     
     subgraph "Infrastructure"
@@ -378,23 +440,34 @@ graph TB
     ArgoCD --> Prometheus
     ArgoCD --> Homepage
     ArgoCD --> Jellyfin
+    ArgoCD --> Prowlarr
+    ArgoCD --> Radarr
     
     CertManager -.->|TLS| GitLab
     CertManager -.->|TLS| Rancher
     CertManager -.->|TLS| Prometheus
     CertManager -.->|TLS| Homepage
     CertManager -.->|TLS| Jellyfin
+    CertManager -.->|TLS| Prowlarr
+    CertManager -.->|TLS| Radarr
     
     Ingress --> GitLab
     Ingress --> Rancher
     Ingress --> Prometheus
     Ingress --> Homepage
     Ingress --> Jellyfin
+    Ingress --> Prowlarr
+    Ingress --> Radarr
     
     GitLab --> Storage
     Rancher --> Storage
     Prometheus --> Storage
     Jellyfin --> Storage
+    Prowlarr --> Storage
+    Radarr --> Storage
+    
+    Prowlarr -.->|API| Radarr
+    Radarr -.->|Notify| Jellyfin
 ```
 
 </details>
@@ -441,7 +514,7 @@ kubectl get certificate gitlab-wildcard-tls -n gitlab
 
 Подробнее см. раздел "Ошибка rotationPolicy" в `applications/gitlab/README.md`.
 
-### Проблемы с Git репозиторием (Homepage, Jellyfin)
+### Проблемы с Git репозиторием (Homepage, Jellyfin, Prowlarr, Radarr)
 
 **Решение**:
 ```bash
@@ -475,7 +548,7 @@ argocd repo add https://github.com/YOUR_USERNAME/YOUR_REPO.git --name lab-home -
 - Helm chart из репозитория
 - Простая структура
 
-**Kustomize** (Homepage, Jellyfin):
+**Kustomize** (Homepage, Jellyfin, Prowlarr, Radarr):
 - Несколько манифестов в папке `base/`
 - `kustomization.yaml` объединяет ресурсы
 - Требует Git репозиторий в ArgoCD
