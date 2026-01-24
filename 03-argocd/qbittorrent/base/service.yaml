@@ -1,0 +1,25 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: qbittorrent
+  namespace: radarr
+  labels:
+    app: qbittorrent
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: http
+    protocol: TCP
+    name: http
+  - port: 6881
+    targetPort: bittorrent
+    protocol: TCP
+    name: bittorrent
+  - port: 6881
+    targetPort: bittorrent-udp
+    protocol: UDP
+    name: bittorrent-udp
+  selector:
+    app: qbittorrent
