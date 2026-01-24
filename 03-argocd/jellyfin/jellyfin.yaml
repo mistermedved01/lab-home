@@ -1,6 +1,6 @@
 ---
 # ArgoCD Application для Jellyfin
-# Jellyfin - свободный медиа-сервер для управления и потоковой передачи мультимедиа
+# Jellyfin - свободный медиа-сервер для управления и потоковой передачи личной коллекции мультимедиа
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
