@@ -1,0 +1,38 @@
+---
+# ArgoCD Application для Jellyfin
+# Jellyfin - свободный медиа-сервер для управления и потоковой передачи мультимедиа
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: jellyfin
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  
+  # Источник - Kustomize из Git репозитория
+  source:
+    repoURL: https://github.com/mistermedved01/lab-home.git
+    targetRevision: HEAD
+    path: 03-argocd/jellyfin
+  
+  # Назначение - текущий кластер, namespace jellyfin
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: jellyfin
+  
+  # Политика синхронизации
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

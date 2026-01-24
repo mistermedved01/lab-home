@@ -29,6 +29,7 @@
    kubectl apply -f 03-argocd/rancher/rancher.yaml
    kubectl apply -f 03-argocd/prometheus-stack/prometheus-stack.yaml
    kubectl apply -f 03-argocd/homepage/homepage.yaml
+   kubectl apply -f 03-argocd/jellyfin/jellyfin.yaml
    kubectl apply -f 03-argocd/minio/minio-operator.yaml
    # После готовности Operator, развернуть Tenant:
    kubectl apply -f 03-argocd/minio/minio-tenant-app.yaml
@@ -67,6 +68,16 @@
 │   │   ├── service.yaml
 │   │   ├── ingress.yaml
 │   │   ├── configmap.yaml
+│   │   └── namespace.yaml
+│   └── README.md                      # Документация
+├── jellyfin/
+│   ├── jellyfin.yaml                  # ArgoCD Application (Kustomize)
+│   ├── kustomization.yaml            # Kustomize конфигурация
+│   ├── base/                          # Kustomize ресурсы
+│   │   ├── deployment.yaml
+│   │   ├── service.yaml
+│   │   ├── ingress.yaml
+│   │   ├── pvc.yaml
 │   │   └── namespace.yaml
 │   └── README.md                      # Документация
 ├── minio/
@@ -108,7 +119,7 @@
    argocd app list
    ```
 
-6. **Git репозиторий настроен в ArgoCD** (для Homepage)
+6. **Git репозиторий настроен в ArgoCD** (для Homepage, Jellyfin)
 
 </details>
 
@@ -166,6 +177,16 @@ CI/CD платформа и управление репозиториями (о�
 - **URL**: `https://homepage.lab-home.com`
 - **Документация**: [`applications/homepage/README.md`](applications/homepage/README.md)
 
+### Jellyfin
+
+Свободный медиа-сервер для управления и потоковой передачи мультимедиа.
+
+- **Файл**: `applications/jellyfin/jellyfin.yaml`
+- **Namespace**: `jellyfin`
+- **Тип**: Kustomize
+- **URL**: `https://jellyfin.lab-home.com`
+- **Документация**: [`applications/jellyfin/README.md`](applications/jellyfin/README.md)
+
 ### MinIO
 
 S3-совместимое объектное хранилище для работы с Buckets в Rancher.
@@ -202,6 +223,9 @@ kubectl apply -f 03-argocd/prometheus-stack/prometheus-stack.yaml
 
 # Homepage
 kubectl apply -f 03-argocd/homepage/homepage.yaml
+
+# Jellyfin
+kubectl apply -f 03-argocd/jellyfin/jellyfin.yaml
 
 # MinIO Operator
 kubectl apply -f 03-argocd/minio/minio-operator.yaml
@@ -284,6 +308,9 @@ kubectl apply -f 03-argocd/prometheus-stack/prometheus-stack.yaml
 # Homepage
 kubectl apply -f 03-argocd/homepage/homepage.yaml
 
+# Jellyfin
+kubectl apply -f 03-argocd/jellyfin/jellyfin.yaml
+
 # MinIO Operator
 kubectl apply -f 03-argocd/minio/minio-operator.yaml
 ```
@@ -304,6 +331,9 @@ kubectl delete secret grafana-tls grafana-tls-ca grafana-tls-chain -n monitoring
 
 # Для Homepage
 kubectl delete secret homepage-tls homepage-tls-ca homepage-tls-chain -n homepage
+
+# Для Jellyfin
+kubectl delete secret jellyfin-tls jellyfin-tls-ca jellyfin-tls-chain -n jellyfin
 
 # Для MinIO Console
 kubectl delete secret minio-console-tls minio-console-tls-ca minio-console-tls-chain -n minio-operator
@@ -334,6 +364,7 @@ graph TB
         Rancher[Rancher<br/>K8s Management]
         Prometheus[Prometheus Stack<br/>Monitoring]
         Homepage[Homepage<br/>Dashboard]
+        Jellyfin[Jellyfin<br/>Media Server]
     end
     
     subgraph "Infrastructure"
@@ -346,20 +377,24 @@ graph TB
     ArgoCD --> Rancher
     ArgoCD --> Prometheus
     ArgoCD --> Homepage
+    ArgoCD --> Jellyfin
     
     CertManager -.->|TLS| GitLab
     CertManager -.->|TLS| Rancher
     CertManager -.->|TLS| Prometheus
     CertManager -.->|TLS| Homepage
+    CertManager -.->|TLS| Jellyfin
     
     Ingress --> GitLab
     Ingress --> Rancher
     Ingress --> Prometheus
     Ingress --> Homepage
+    Ingress --> Jellyfin
     
     GitLab --> Storage
     Rancher --> Storage
     Prometheus --> Storage
+    Jellyfin --> Storage
 ```
 
 </details>
@@ -406,7 +441,7 @@ kubectl get certificate gitlab-wildcard-tls -n gitlab
 
 Подробнее см. раздел "Ошибка rotationPolicy" в `applications/gitlab/README.md`.
 
-### Проблемы с Git репозиторием (Homepage)
+### Проблемы с Git репозиторием (Homepage, Jellyfin)
 
 **Решение**:
 ```bash
@@ -440,7 +475,7 @@ argocd repo add https://github.com/YOUR_USERNAME/YOUR_REPO.git --name lab-home -
 - Helm chart из репозитория
 - Простая структура
 
-**Kustomize** (Homepage):
+**Kustomize** (Homepage, Jellyfin):
 - Несколько манифестов в папке `base/`
 - `kustomization.yaml` объединяет ресурсы
 - Требует Git репозиторий в ArgoCD
