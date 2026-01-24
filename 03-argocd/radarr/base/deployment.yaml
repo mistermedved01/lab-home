@@ -69,4 +69,5 @@ spec:
         persistentVolumeClaim:
           claimName: radarr-media
       - name: downloads
-        emptyDir: {}
+        persistentVolumeClaim:
+          claimName: radarr-downloads
