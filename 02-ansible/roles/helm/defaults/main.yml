@@ -2,3 +2,6 @@
 # Переменные по умолчанию для роли helm
 # helm_version должен быть определен в group_vars/all.yaml
 # kubeconfig_path должен быть определен в group_vars/all.yaml
+
+# Доп. аргументы только для helm upgrade (напр. --force при конфликтах server-side apply)
+helm_upgrade_extra_args: ""
