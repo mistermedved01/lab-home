@@ -29,15 +29,16 @@
    kubectl apply -f 03-argocd/rancher/rancher.yaml
    kubectl apply -f 03-argocd/prometheus-stack/prometheus-stack.yaml
    kubectl apply -f 03-argocd/homepage/homepage.yaml
-   kubectl apply -f 03-argocd/jellyfin/jellyfin.yaml
-   kubectl apply -f 03-argocd/prowlarr/prowlarr.yaml
-   kubectl apply -f 03-argocd/radarr/radarr.yaml
+   kubectl apply -f 03-argocd/media-server-stack/jellyfin/jellyfin.yaml
+   kubectl apply -f 03-argocd/media-server-stack/prowlarr/prowlarr.yaml
+   kubectl apply -f 03-argocd/media-server-stack/qbittorrent/qbittorrent.yaml
+   kubectl apply -f 03-argocd/media-server-stack/radarr/radarr.yaml
    kubectl apply -f 03-argocd/minio/minio-operator.yaml
    # После готовности Operator, развернуть Tenant:
    kubectl apply -f 03-argocd/minio/minio-tenant-app.yaml
    ```
 
-📋**Детальные инструкции:** см. README каждого приложения в `applications/`
+📋**Детальные инструкции:** см. README каждого приложения в соответствующих директориях
 
 </details>
 
@@ -72,36 +73,48 @@
 │   │   ├── configmap.yaml
 │   │   └── namespace.yaml
 │   └── README.md                      # Документация
-├── jellyfin/
-│   ├── jellyfin.yaml                  # ArgoCD Application (Kustomize)
-│   ├── kustomization.yaml            # Kustomize конфигурация
-│   ├── base/                          # Kustomize ресурсы
-│   │   ├── deployment.yaml
-│   │   ├── service.yaml
-│   │   ├── ingress.yaml
-│   │   ├── pvc.yaml
-│   │   └── namespace.yaml
-│   └── README.md                      # Документация
-├── prowlarr/
-│   ├── prowlarr.yaml                  # ArgoCD Application (Kustomize)
-│   ├── kustomization.yaml            # Kustomize конфигурация
-│   ├── base/                          # Kustomize ресурсы
-│   │   ├── deployment.yaml
-│   │   ├── service.yaml
-│   │   ├── ingress.yaml
-│   │   ├── pvc.yaml
-│   │   └── namespace.yaml
-│   └── README.md                      # Документация
-├── radarr/
-│   ├── radarr.yaml                    # ArgoCD Application (Kustomize)
-│   ├── kustomization.yaml            # Kustomize конфигурация
-│   ├── base/                          # Kustomize ресурсы
-│   │   ├── deployment.yaml
-│   │   ├── service.yaml
-│   │   ├── ingress.yaml
-│   │   ├── pvc.yaml
-│   │   └── namespace.yaml
-│   └── README.md                      # Документация
+├── media-server-stack/                # Медиа-стек приложений
+│   ├── README.md                      # Общая документация стека
+│   ├── jellyfin/
+│   │   ├── jellyfin.yaml              # ArgoCD Application (Kustomize)
+│   │   ├── kustomization.yaml        # Kustomize конфигурация
+│   │   ├── base/                      # Kustomize ресурсы
+│   │   │   ├── deployment.yaml
+│   │   │   ├── service.yaml
+│   │   │   ├── ingress.yaml
+│   │   │   ├── pvc.yaml
+│   │   │   └── namespace.yaml
+│   │   └── README.md                  # Документация
+│   ├── prowlarr/
+│   │   ├── prowlarr.yaml              # ArgoCD Application (Kustomize)
+│   │   ├── kustomization.yaml        # Kustomize конфигурация
+│   │   ├── base/                      # Kustomize ресурсы
+│   │   │   ├── deployment.yaml
+│   │   │   ├── service.yaml
+│   │   │   ├── ingress.yaml
+│   │   │   ├── pvc.yaml
+│   │   │   └── namespace.yaml
+│   │   └── README.md                  # Документация
+│   ├── qbittorrent/
+│   │   ├── qbittorrent.yaml          # ArgoCD Application (Kustomize)
+│   │   ├── kustomization.yaml        # Kustomize конфигурация
+│   │   ├── base/                      # Kustomize ресурсы
+│   │   │   ├── deployment.yaml
+│   │   │   ├── service.yaml
+│   │   │   ├── ingress.yaml
+│   │   │   ├── pvc.yaml               # Создает radarr-downloads PVC
+│   │   │   └── configmap-webui-fix.yaml  # ConfigMap для исправления WebUI
+│   │   └── README.md                  # Документация
+│   └── radarr/
+│       ├── radarr.yaml                # ArgoCD Application (Kustomize)
+│       ├── kustomization.yaml        # Kustomize конфигурация
+│       ├── base/                      # Kustomize ресурсы
+│       │   ├── deployment.yaml
+│       │   ├── service.yaml
+│       │   ├── ingress.yaml
+│       │   ├── pvc.yaml
+│       │   └── namespace.yaml
+│       └── README.md                  # Документация
 ├── minio/
 │   ├── minio-operator.yaml            # ArgoCD Application (Helm)
 │   ├── minio-tenant.yaml              # MinIO Tenant CRD
@@ -154,90 +167,100 @@
 
 Автоматический менеджер TLS сертификатов для Kubernetes.
 
-- **Файл**: `applications/cert-manager/cert-manager.yaml`
+- **Файл**: `03-argocd/cert-manager/cert-manager.yaml`
 - **Namespace**: `cert-manager`
 - **Тип**: Helm chart
-- **Документация**: [`applications/cert-manager/README.md`](applications/cert-manager/README.md)
+- **Документация**: [`cert-manager/README.md`](cert-manager/README.md)
 
 ### GitLab
 
 CI/CD платформа и управление репозиториями (облегченная версия).
 
-- **Файл**: `applications/gitlab/application.yaml`
+- **Файл**: `03-argocd/gitlab/application.yaml`
 - **Namespace**: `gitlab`
 - **Тип**: Helm chart
 - **URL**: `https://gitlab.lab-home.com`
-- **Документация**: [`applications/gitlab/README.md`](applications/gitlab/README.md)
+- **Документация**: [`gitlab/README.md`](gitlab/README.md)
 
 ### Rancher
 
 Платформа управления Kubernetes кластерами.
 
-- **Файл**: `applications/rancher/rancher.yaml`
+- **Файл**: `03-argocd/rancher/rancher.yaml`
 - **Namespace**: `cattle-system`
 - **Тип**: Helm chart
 - **URL**: `https://rancher.lab-home.com`
-- **Документация**: [`applications/rancher/README.md`](applications/rancher/README.md)
+- **Документация**: [`rancher/README.md`](rancher/README.md)
 
 ### Prometheus Stack
 
 Полный стек мониторинга (Prometheus + Grafana + Alertmanager).
 
-- **Файл**: `applications/prometheus-stack/prometheus-stack.yaml`
+- **Файл**: `03-argocd/prometheus-stack/prometheus-stack.yaml`
 - **Namespace**: `monitoring`
 - **Тип**: Helm chart
 - **URL**: `https://grafana.lab-home.com`
-- **Документация**: [`applications/prometheus-stack/README.md`](applications/prometheus-stack/README.md)
+- **Документация**: [`prometheus-stack/README.md`](prometheus-stack/README.md)
 
 ### Homepage
 
 Современная домашняя страница/дашборд для самохостинга.
 
-- **Файл**: `applications/homepage/homepage.yaml`
+- **Файл**: `03-argocd/homepage/homepage.yaml`
 - **Namespace**: `homepage`
 - **Тип**: Kustomize
 - **URL**: `https://homepage.lab-home.com`
-- **Документация**: [`applications/homepage/README.md`](applications/homepage/README.md)
+- **Документация**: [`homepage/README.md`](homepage/README.md)
 
 ### Jellyfin
 
 Свободный медиа-сервер для управления и потоковой передачи личной коллекции мультимедиа.
 
-- **Файл**: `applications/jellyfin/jellyfin.yaml`
+- **Файл**: `03-argocd/media-server-stack/jellyfin/jellyfin.yaml`
 - **Namespace**: `jellyfin`
 - **Тип**: Kustomize
 - **URL**: `https://jellyfin.lab-home.com`
-- **Документация**: [`applications/jellyfin/README.md`](applications/jellyfin/README.md)
+- **Документация**: [`media-server-stack/jellyfin/README.md`](media-server-stack/jellyfin/README.md)
 
 ### Prowlarr
 
 Менеджер источников медиаконтента для организации личной коллекции видео.
 
-- **Файл**: `applications/prowlarr/prowlarr.yaml`
+- **Файл**: `03-argocd/media-server-stack/prowlarr/prowlarr.yaml`
 - **Namespace**: `prowlarr`
 - **Тип**: Kustomize
 - **URL**: `https://prowlarr.lab-home.com`
-- **Документация**: [`applications/prowlarr/README.md`](applications/prowlarr/README.md)
+- **Документация**: [`media-server-stack/prowlarr/README.md`](media-server-stack/prowlarr/README.md)
 
 ### Radarr
 
 Менеджер личной видеотеки для организации домашнего видео и семейных архивов.
 
-- **Файл**: `applications/radarr/radarr.yaml`
+- **Файл**: `03-argocd/media-server-stack/radarr/radarr.yaml`
 - **Namespace**: `radarr`
 - **Тип**: Kustomize
 - **URL**: `https://radarr.lab-home.com`
-- **Документация**: [`applications/radarr/README.md`](applications/radarr/README.md)
+- **Документация**: [`media-server-stack/radarr/README.md`](media-server-stack/radarr/README.md)
+
+### qBittorrent
+
+BitTorrent клиент для загрузки медиафайлов, интегрированный с Radarr.
+
+- **Файл**: `03-argocd/media-server-stack/qbittorrent/qbittorrent.yaml`
+- **Namespace**: `radarr` (общий с Radarr для shared downloads PVC)
+- **Тип**: Kustomize
+- **URL**: `https://qbittorrent.lab-home.com`
+- **Документация**: [`media-server-stack/qbittorrent/README.md`](media-server-stack/qbittorrent/README.md)
 
 ### MinIO
 
 S3-совместимое объектное хранилище для работы с Buckets в Rancher.
 
-- **Файл**: `applications/minio/minio-operator.yaml`
+- **Файл**: `03-argocd/minio/minio-operator.yaml`
 - **Namespace**: `minio-operator`
 - **Тип**: Helm chart (Operator) + CRD (Tenant)
 - **URL**: `https://minio.lab-home.com` (Console)
-- **Документация**: [`applications/minio/README.md`](applications/minio/README.md)
+- **Документация**: [`minio/README.md`](minio/README.md)
 
 </details>
 
@@ -267,13 +290,16 @@ kubectl apply -f 03-argocd/prometheus-stack/prometheus-stack.yaml
 kubectl apply -f 03-argocd/homepage/homepage.yaml
 
 # Jellyfin
-kubectl apply -f 03-argocd/jellyfin/jellyfin.yaml
+kubectl apply -f 03-argocd/media-server-stack/jellyfin/jellyfin.yaml
 
 # Prowlarr
-kubectl apply -f 03-argocd/prowlarr/prowlarr.yaml
+kubectl apply -f 03-argocd/media-server-stack/prowlarr/prowlarr.yaml
 
 # Radarr
-kubectl apply -f 03-argocd/radarr/radarr.yaml
+kubectl apply -f 03-argocd/media-server-stack/radarr/radarr.yaml
+
+# qBittorrent
+kubectl apply -f 03-argocd/media-server-stack/qbittorrent/qbittorrent.yaml
 
 # MinIO Operator
 kubectl apply -f 03-argocd/minio/minio-operator.yaml
@@ -357,13 +383,16 @@ kubectl apply -f 03-argocd/prometheus-stack/prometheus-stack.yaml
 kubectl apply -f 03-argocd/homepage/homepage.yaml
 
 # Jellyfin
-kubectl apply -f 03-argocd/jellyfin/jellyfin.yaml
+kubectl apply -f 03-argocd/media-server-stack/jellyfin/jellyfin.yaml
 
 # Prowlarr
-kubectl apply -f 03-argocd/prowlarr/prowlarr.yaml
+kubectl apply -f 03-argocd/media-server-stack/prowlarr/prowlarr.yaml
 
 # Radarr
-kubectl apply -f 03-argocd/radarr/radarr.yaml
+kubectl apply -f 03-argocd/media-server-stack/radarr/radarr.yaml
+
+# qBittorrent
+kubectl apply -f 03-argocd/media-server-stack/qbittorrent/qbittorrent.yaml
 
 # MinIO Operator
 kubectl apply -f 03-argocd/minio/minio-operator.yaml
@@ -394,6 +423,9 @@ kubectl delete secret prowlarr-tls prowlarr-tls-ca prowlarr-tls-chain -n prowlar
 
 # Для Radarr
 kubectl delete secret radarr-tls radarr-tls-ca radarr-tls-chain -n radarr
+
+# Для qBittorrent
+kubectl delete secret qbittorrent-tls qbittorrent-tls-ca qbittorrent-tls-chain -n radarr
 
 # Для MinIO Console
 kubectl delete secret minio-console-tls minio-console-tls-ca minio-console-tls-chain -n minio-operator
@@ -512,9 +544,9 @@ kubectl delete secret gitlab-wildcard-tls gitlab-wildcard-tls-ca gitlab-wildcard
 kubectl get certificate gitlab-wildcard-tls -n gitlab
 ```
 
-Подробнее см. раздел "Ошибка rotationPolicy" в `applications/gitlab/README.md`.
+Подробнее см. раздел "Ошибка rotationPolicy" в `gitlab/README.md`.
 
-### Проблемы с Git репозиторием (Homepage, Jellyfin, Prowlarr, Radarr)
+### Проблемы с Git репозиторием (Homepage, Jellyfin, Prowlarr, Radarr, qBittorrent)
 
 **Решение**:
 ```bash
@@ -548,7 +580,7 @@ argocd repo add https://github.com/YOUR_USERNAME/YOUR_REPO.git --name lab-home -
 - Helm chart из репозитория
 - Простая структура
 
-**Kustomize** (Homepage, Jellyfin, Prowlarr, Radarr):
+**Kustomize** (Homepage, Jellyfin, Prowlarr, Radarr, qBittorrent):
 - Несколько манифестов в папке `base/`
 - `kustomization.yaml` объединяет ресурсы
 - Требует Git репозиторий в ArgoCD
@@ -592,6 +624,6 @@ ArgoCD автоматически синхронизирует Applications пр
 - ⚠️ Требует доступность домена из интернета
 - ⚠️ Требует правильную настройку DNS
 
-См. `applications/cert-manager/README.md` для настройки Let's Encrypt.
+См. `cert-manager/README.md` для настройки Let's Encrypt.
 
 </details>
