@@ -25,12 +25,12 @@
 
 3. **Разверните Jellyfin (для интеграции медиабиблиотеки):**
    ```bash
-   kubectl apply -f 03-argocd/jellyfin/jellyfin.yaml
+   kubectl apply -f 03-argocd/media-server-stack/jellyfin/jellyfin.yaml
    ```
 
 4. **Разверните Prowlarr (для управления индексерами):**
    ```bash
-   kubectl apply -f 03-argocd/prowlarr/prowlarr.yaml
+   kubectl apply -f 03-argocd/media-server-stack/prowlarr/prowlarr.yaml
    ```
 
 5. **Настройте Git репозиторий в ArgoCD:**
@@ -40,7 +40,7 @@
 
 6. **Примените ArgoCD Application для Radarr:**
    ```bash
-   kubectl apply -f 03-argocd/radarr/radarr.yaml
+   kubectl apply -f 03-argocd/media-server-stack/radarr/radarr.yaml
    ```
 
 7. **Дождитесь готовности:**
@@ -181,16 +181,16 @@ kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=cert-manage
 kubectl apply -f 03-argocd/cert-manager/clusterissuer-selfsigned.yaml
 
 # Jellyfin (опционально, но рекомендуется)
-kubectl apply -f 03-argocd/jellyfin/jellyfin.yaml
+kubectl apply -f 03-argocd/media-server-stack/jellyfin/jellyfin.yaml
 
 # Prowlarr (опционально, но рекомендуется)
-kubectl apply -f 03-argocd/prowlarr/prowlarr.yaml
+kubectl apply -f 03-argocd/media-server-stack/prowlarr/prowlarr.yaml
 ```
 
 ### 3. Применение ArgoCD Application
 
 ```bash
-kubectl apply -f 03-argocd/radarr/radarr.yaml
+kubectl apply -f 03-argocd/media-server-stack/radarr/radarr.yaml
 kubectl get application radarr -n argocd
 ```
 
