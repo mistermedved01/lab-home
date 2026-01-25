@@ -44,6 +44,9 @@ spec:
           mountPath: /config
         - name: downloads
           mountPath: /downloads
+        - name: webui-fix-script
+          mountPath: /custom-cont-init.d
+          readOnly: true
         resources:
           requests:
             memory: "256Mi"
@@ -74,3 +77,7 @@ spec:
       - name: downloads
         persistentVolumeClaim:
           claimName: radarr-downloads
+      - name: webui-fix-script
+        configMap:
+          name: qbittorrent-webui-fix
+          defaultMode: 0755

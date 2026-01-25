@@ -1,0 +1,29 @@
+---
+# Скрипт для custom-cont-init.d: отключает Host header validation и CSRF
+# при доступе через reverse proxy (ingress), устраняя Unauthorized в WebUI.
+# Выполняется до старта qBittorrent.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: qbittorrent-webui-fix
+  namespace: radarr
+  labels:
+    app: qbittorrent
+data:
+  99-fix-webui-reverseproxy.sh: |
+    #!/bin/sh
+    set -e
+    for cfg in /config/qBittorrent/qBittorrent.conf /config/qBittorrent/config/qBittorrent.conf; do
+      [ -f "$cfg" ] || continue
+      if grep -q 'WebUI\\HostHeaderValidation=' "$cfg"; then
+        sed -i 's/^WebUI\\HostHeaderValidation=.*/WebUI\\HostHeaderValidation=false/' "$cfg"
+      else
+        echo 'WebUI\HostHeaderValidation=false' >> "$cfg"
+      fi
+      if grep -q 'WebUI\\CSRFProtection=' "$cfg"; then
+        sed -i 's/^WebUI\\CSRFProtection=.*/WebUI\\CSRFProtection=false/' "$cfg"
+      else
+        echo 'WebUI\CSRFProtection=false' >> "$cfg"
+      fi
+      break
+    done

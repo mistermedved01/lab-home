@@ -6,6 +6,7 @@ namespace: radarr
 
 resources:
   - base/pvc.yaml
+  - base/configmap-webui-fix.yaml
   - base/deployment.yaml
   - base/service.yaml
   - base/ingress.yaml
