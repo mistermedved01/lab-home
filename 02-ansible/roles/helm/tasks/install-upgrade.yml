@@ -72,8 +72,8 @@
       --namespace {{ helm_namespace }}
       --values {{ helm_values_file }}
       {{ helm_extra_args | default('') }}
+      {{ helm_upgrade_extra_args | default('') }}
       --kubeconfig={{ kubeconfig_path }}
-      --wait=false
       --timeout=5m
   register: helm_upgrade
   when: release_exists
