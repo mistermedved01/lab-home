@@ -9,7 +9,14 @@
 
 **Минимальные шаги для развертывания Media Server Stack:**
 
-1. **Разверните cert-manager (обязательно первым):**
+1. **Настройте StorageClass (если еще не настроен)** (обязательно; PVC не создадутся без него):
+   ```bash
+   kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.24/deploy/local-path-storage.yaml
+   kubectl patch storageclass local-path -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
+   kubectl get storageclass
+   ```
+
+2. **Разверните cert-manager (обязательно первым):**
    ```bash
    kubectl apply -f 03-argocd/cert-manager/cert-manager.yaml
    kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=cert-manager -n cert-manager --timeout=300s
@@ -17,7 +24,7 @@
    kubectl get clusterissuer selfsigned-issuer
    ```
 
-2. **Примените ArgoCD Applications (в указанном порядке):**
+3. **Примените ArgoCD Applications (в указанном порядке):**
    ```bash
    # Jellyfin
    kubectl apply -f 03-argocd/media-server-stack/jellyfin/jellyfin.yaml
@@ -32,19 +39,19 @@
    kubectl apply -f 03-argocd/media-server-stack/radarr/radarr.yaml
    ```
 
-3. **Дождитесь готовности (5-10 минут):**
+4. **Дождитесь готовности (5-10 минут):**
    ```bash
    kubectl get pods -n jellyfin -w
    kubectl get pods -n prowlarr -w
    kubectl get pods -n radarr -w  # qBittorrent и Radarr в namespace radarr
    ```
 
-4. **Получите временный пароль qBittorrent:**
+5. **Получите временный пароль qBittorrent:**
    ```bash
    kubectl logs -n radarr deployment/qbittorrent | grep -i "temporary password"
    ```
 
-5. **Войдите в приложения:**
+6. **Войдите в приложения:**
    - **Jellyfin**: `https://jellyfin.lab-home.com`
    - **Prowlarr**: `https://prowlarr.lab-home.com`
    - **qBittorrent**: `https://qbittorrent.lab-home.com` (логин: `admin`, пароль: из логов)
@@ -174,7 +181,7 @@ media-server-stack/
    kubectl get pods -n ingress-nginx
    ```
 
-4. **StorageClass настроен** для PersistentVolumes
+4. **StorageClass установлен** (обязательно; без него PVC не создадутся):
    ```bash
    kubectl get storageclass
    ```
