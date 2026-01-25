@@ -42,7 +42,7 @@
 
 4. **Примените ArgoCD Application для Jellyfin:**
    ```bash
-   kubectl apply -f 03-argocd/jellyfin/jellyfin.yaml
+   kubectl apply -f 03-argocd/media-server-stack/jellyfin/jellyfin.yaml
    ```
 
 5. **Дождитесь готовности:**
@@ -253,7 +253,7 @@ kubectl describe clusterissuer selfsigned-issuer
 source:
   repoURL: https://github.com/YOUR_USERNAME/YOUR_REPO.git
   targetRevision: HEAD
-  path: 03-argocd/jellyfin
+  path: 03-argocd/media-server-stack/jellyfin
 ```
 
 #### Добавить репозиторий в ArgoCD
@@ -288,7 +288,7 @@ argocd repo add https://github.com/YOUR_USERNAME/YOUR_REPO.git \
 
 ```bash
 # Применить Application
-kubectl apply -f 03-argocd/jellyfin/jellyfin.yaml
+kubectl apply -f 03-argocd/media-server-stack/jellyfin/jellyfin.yaml
 
 # Проверить статус Application
 kubectl get application jellyfin -n argocd
