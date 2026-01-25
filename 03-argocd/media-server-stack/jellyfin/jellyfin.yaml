@@ -1,10 +1,10 @@
 ---
-# ArgoCD Application для Radarr
-# Radarr - менеджер личной видеотеки для организации домашнего видео и семейных архивов
+# ArgoCD Application для Jellyfin
+# Jellyfin - свободный медиа-сервер для управления и потоковой передачи личной коллекции мультимедиа
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: radarr
+  name: jellyfin
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
@@ -15,12 +15,12 @@ spec:
   source:
     repoURL: https://github.com/mistermedved01/lab-home.git
     targetRevision: HEAD
-    path: 03-argocd/radarr
+    path: 03-argocd/media-server-stack/jellyfin
   
-  # Назначение - текущий кластер, namespace radarr
+  # Назначение - текущий кластер, namespace jellyfin
   destination:
     server: https://kubernetes.default.svc
-    namespace: radarr
+    namespace: jellyfin
   
   # Политика синхронизации
   syncPolicy:

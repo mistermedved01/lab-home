@@ -15,7 +15,7 @@ spec:
   source:
     repoURL: https://github.com/mistermedved01/lab-home.git
     targetRevision: HEAD
-    path: 03-argocd/prowlarr
+    path: 03-argocd/media-server-stack/prowlarr
   
   # Назначение - текущий кластер, namespace prowlarr
   destination:

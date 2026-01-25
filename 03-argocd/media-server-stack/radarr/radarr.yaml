@@ -1,10 +1,10 @@
 ---
-# ArgoCD Application для qBittorrent
-# qBittorrent - BitTorrent клиент для загрузки медиафайлов
+# ArgoCD Application для Radarr
+# Radarr - менеджер личной видеотеки для организации домашнего видео и семейных архивов
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: qbittorrent
+  name: radarr
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
@@ -15,9 +15,9 @@ spec:
   source:
     repoURL: https://github.com/mistermedved01/lab-home.git
     targetRevision: HEAD
-    path: 03-argocd/qbittorrent
+    path: 03-argocd/media-server-stack/radarr
   
-  # Назначение - текущий кластер, namespace radarr (общий с Radarr для shared downloads)
+  # Назначение - текущий кластер, namespace radarr
   destination:
     server: https://kubernetes.default.svc
     namespace: radarr
@@ -28,7 +28,8 @@ spec:
       prune: true
       selfHeal: true
       allowEmpty: false
-    syncOptions: []
+    syncOptions:
+      - CreateNamespace=true
     retry:
       limit: 5
       backoff:

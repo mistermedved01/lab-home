@@ -1,10 +1,10 @@
 ---
-# ArgoCD Application для Jellyfin
-# Jellyfin - свободный медиа-сервер для управления и потоковой передачи личной коллекции мультимедиа
+# ArgoCD Application для qBittorrent
+# qBittorrent - BitTorrent клиент для загрузки медиафайлов
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: jellyfin
+  name: qbittorrent
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
@@ -15,12 +15,12 @@ spec:
   source:
     repoURL: https://github.com/mistermedved01/lab-home.git
     targetRevision: HEAD
-    path: 03-argocd/jellyfin
+    path: 03-argocd/media-server-stack/qbittorrent
   
-  # Назначение - текущий кластер, namespace jellyfin
+  # Назначение - текущий кластер, namespace radarr (общий с Radarr для shared downloads)
   destination:
     server: https://kubernetes.default.svc
-    namespace: jellyfin
+    namespace: radarr
   
   # Политика синхронизации
   syncPolicy:
@@ -28,8 +28,7 @@ spec:
       prune: true
       selfHeal: true
       allowEmpty: false
-    syncOptions:
-      - CreateNamespace=true
+    syncOptions: []
     retry:
       limit: 5
       backoff:
