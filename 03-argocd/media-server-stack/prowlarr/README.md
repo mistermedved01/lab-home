@@ -30,7 +30,7 @@
 
 4. **Примените ArgoCD Application для Prowlarr:**
    ```bash
-   kubectl apply -f 03-argocd/prowlarr/prowlarr.yaml
+   kubectl apply -f 03-argocd/media-server-stack/prowlarr/prowlarr.yaml
    ```
 
 5. **Дождитесь готовности:**
@@ -160,7 +160,7 @@ kubectl get clusterissuer selfsigned-issuer
 ### 3. Применение ArgoCD Application
 
 ```bash
-kubectl apply -f 03-argocd/prowlarr/prowlarr.yaml
+kubectl apply -f 03-argocd/media-server-stack/prowlarr/prowlarr.yaml
 kubectl get application prowlarr -n argocd
 ```
 
