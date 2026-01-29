@@ -84,7 +84,7 @@ vm_list = {
 # vm_user = "ubuntu"
 # ansible_ssh_user = null  # если null, будет использован vm_user
 # ansible_ssh_key_path = "keys/id_ed25519"
-# ansible_version = "12.3.0-1ppa~noble"
+# ansible_version = "13.2.0-1ppa~noble"
 # network_cidr = 24
 
 # SSH ключ для подключения к Proxmox (для операций провайдера)

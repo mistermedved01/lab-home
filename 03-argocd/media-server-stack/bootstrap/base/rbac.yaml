@@ -1,0 +1,73 @@
+---
+# ServiceAccount for Bootstrap Job (runs in radarr namespace)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: media-stack-bootstrap
+  namespace: radarr
+  labels:
+    app: media-stack-bootstrap
+---
+# Role in radarr: read pods (to find radarr pod if needed), create/patch secrets
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: media-stack-bootstrap
+  namespace: radarr
+  labels:
+    app: media-stack-bootstrap
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "create", "patch", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: media-stack-bootstrap
+  namespace: radarr
+  labels:
+    app: media-stack-bootstrap
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: media-stack-bootstrap
+subjects:
+  - kind: ServiceAccount
+    name: media-stack-bootstrap
+    namespace: radarr
+---
+# Role in prowlarr: get pods and exec into prowlarr pod to read config.xml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: media-stack-bootstrap-read-config
+  namespace: prowlarr
+  labels:
+    app: media-stack-bootstrap
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: media-stack-bootstrap-read-config
+  namespace: prowlarr
+  labels:
+    app: media-stack-bootstrap
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: media-stack-bootstrap-read-config
+subjects:
+  - kind: ServiceAccount
+    name: media-stack-bootstrap
+    namespace: radarr

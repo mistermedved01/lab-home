@@ -1,0 +1,33 @@
+---
+# ArgoCD Application: Media Stack Bootstrap Job
+# One-time Job that extracts ApiKey from Radarr/Prowlarr config.xml and writes to Secret buildarr-secrets.
+# Deploy after Radarr and Prowlarr are running.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: media-stack-bootstrap
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argocd.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/mistermedved01/lab-home.git
+    targetRevision: HEAD
+    path: 03-argocd/media-server-stack/bootstrap
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: radarr
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

@@ -81,11 +81,82 @@ cp terraform.tfvars.example terraform.tfvars
 # Отредактируйте terraform.tfvars и заполните реальными значениями
 ```
 
-**Важно:** Укажите корректные значения для:
-- `proxmox_endpoint` - URL вашего Proxmox API
-- `proxmox_api_token` - API токен для Terraform
-- `ssh_public_key` - ваш публичный SSH ключ
-- `vm_list` - список виртуальных машин с IP-адресами и ресурсами
+**Важно:** Укажите корректные значения для следующих параметров. Подробные инструкции и команды для получения каждого значения:
+
+##### `proxmox_endpoint`
+
+- **Формат:** `https://IP_АДРЕС:8006/`
+- **Как получить:** IP-адрес вашего Proxmox сервера
+- **Пример:** `https://192.168.40.143:8006/`
+
+##### `proxmox_api_token`
+
+- **Формат:** `USERNAME@REALM!TOKEN_NAME=TOKEN_VALUE`
+- **Создание через командную строку** (на Proxmox хосте):
+  ```bash
+  # Создать пользователя (если еще не создан)
+  pveum user add terraform@pve --password YOUR_PASSWORD
+  
+  # Создать токен (значение токена будет выведено сразу после создания)
+  pveum user token add terraform@pve terraform-token --privsep 0
+  # Вывод будет содержать полный токен в формате:
+  # terraform@pve!terraform-token=TOKEN_VALUE
+  ```
+
+- **Важно:** Значение токена показывается только при создании и не может быть получено позже!
+
+- **Просмотр списка существующих токенов** (без значений):
+  ```bash
+  # Показать все токены пользователя
+  pveum user token list terraform@pve
+  
+  # Показать информацию о конкретном токене (без значения)
+  pveum user token show terraform@pve terraform-token
+  ```
+
+- **Если токен потерян**, нужно создать новый:
+  ```bash
+  # Удалить старый токен
+  pveum user token remove terraform@pve terraform-token
+  
+  # Создать новый токен
+  pveum user token add terraform@pve terraform-token --privsep 0
+  ```
+
+- **Альтернатива:** создать через веб-интерфейс Proxmox (Datacenter → Permissions → API Tokens)
+
+##### `ssh_public_key`
+
+- **Формат:** `ssh-ed25519 ...` или `ssh-rsa ...`
+- **Получение существующего ключа:**
+  ```bash
+  # Для ed25519 ключа (рекомендуется)
+  cat ~/.ssh/id_ed25519.pub
+  
+  # Или для RSA ключа
+  cat ~/.ssh/id_rsa.pub
+  ```
+
+- **Создание нового ключа** (если ключа нет):
+  ```bash
+  # Создать новый ed25519 ключ (рекомендуется)
+  ssh-keygen -t ed25519 -C "your_email@example.com"
+  
+  # Вывести публичный ключ
+  cat ~/.ssh/id_ed25519.pub
+  ```
+
+- **Важно:** этот ключ будет добавлен во все создаваемые VM для доступа по SSH
+
+##### `vm_list`
+
+- **Формат:** объект с параметрами каждой VM (hostname, IP-адрес, ID, ресурсы)
+- **Проверка VM ID:** убедитесь, что VM ID не занят в Proxmox (через веб-интерфейс или API)
+- **Пример конфигурации:** см. `terraform.tfvars.example`
+- **Важно:**
+  - IP-адреса должны быть уникальными и доступными в вашей сети
+  - VM ID должны быть уникальными (обычно 100-999 для пользовательских VM)
+  - Ресурсы должны соответствовать возможностям Proxmox хоста
 
 #### Шаг 2: Загрузка ISO образа в Proxmox
 

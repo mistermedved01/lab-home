@@ -27,7 +27,7 @@ module "vms" {
   network_bridge      = "vmbr0"
   ssh_authorized_keys = [var.ssh_public_key]
   vm_user             = "ubuntu"
-  ansible_version     = "12.3.0-1ppa~noble"
+  ansible_version     = "13.2.0-1ppa~noble"
 
   vm_list = {
     web-server-01 = {
@@ -119,7 +119,7 @@ module "k8s_cluster" {
 | `template_vm_id` | `number` | `9000` | ID шаблона VM для клонирования |
 | `snippets_datastore_id` | `string` | `"local"` | Хранилище для cloud-init snippets |
 | `network_cidr` | `number` | `24` | CIDR маска подсети (например, 24 для /24) |
-| `ansible_version` | `string` | `"12.3.0-1ppa~noble"` | Версия Ansible (используется в ansible-control шаблоне) |
+| `ansible_version` | `string` | `"13.2.0-1ppa~noble"` | Версия Ansible (используется в ansible-control шаблоне) |
 
 ### Структура vm_list
 

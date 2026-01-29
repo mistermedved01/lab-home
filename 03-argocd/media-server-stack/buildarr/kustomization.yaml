@@ -1,0 +1,15 @@
+---
+# Buildarr Job: applies buildarr.yml to Prowlarr and Radarr.
+# Secret buildarr-secrets (key buildarr-secret.yml) must exist - create manually or run bootstrap Job first.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: radarr
+
+resources:
+  - base/configmap.yaml
+  - base/job.yaml
+
+commonLabels:
+  app: buildarr
+  managed-by: argocd

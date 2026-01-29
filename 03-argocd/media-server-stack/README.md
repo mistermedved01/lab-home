@@ -2,6 +2,12 @@
 
 Этот каталог содержит конфигурацию для развертывания медиа-стека через ArgoCD: Jellyfin (медиа-сервер), Prowlarr (менеджер источников), qBittorrent (BitTorrent клиент) и Radarr (менеджер видеотеки).
 
+## 🚀 Быстрый старт
+
+**📖 Полное руководство по настройке медиа-конвейера**: [SETUP_GUIDE.md](./SETUP_GUIDE.md)
+
+Это пошаговое руководство поможет настроить полноценный автоматизированный медиа-конвейер типа Netflix/Кинопоиск с интеграциями между всеми компонентами и автоматизацией загрузки фильмов.
+
 <details>
 <summary><strong>🚀Быстрый старт</strong></summary>
 
@@ -56,6 +62,10 @@
    - **Prowlarr**: `https://prowlarr.lab-home.com`
    - **qBittorrent**: `https://qbittorrent.lab-home.com` (логин: `admin`, пароль: из логов)
    - **Radarr**: `https://radarr.lab-home.com`
+
+7. **📖 Настройте медиа-конвейер:**
+   - Следуйте полному руководству: [SETUP_GUIDE.md](./SETUP_GUIDE.md)
+   - Это пошаговая инструкция по настройке всех интеграций и автоматизации
 
 📋**Детальные инструкции:** см. секции ниже
 
@@ -145,19 +155,29 @@ media-server-stack/
 │   │   ├── pvc.yaml             # Создает radarr-downloads PVC
 │   │   └── configmap-webui-fix.yaml  # Скрипт для исправления WebUI
 │   └── (README см. этот файл)
-└── radarr/
-    ├── radarr.yaml               # ArgoCD Application (Kustomize)
-    ├── kustomization.yaml       # Kustomize конфигурация
-    ├── base/                    # Kustomize ресурсы
-    │   ├── deployment.yaml
-    │   ├── service.yaml
-    │   ├── ingress.yaml
-    │   ├── pvc.yaml
-    │   └── namespace.yaml
-    └── README.md                # Документация Radarr
+├── radarr/
+│   ├── radarr.yaml               # ArgoCD Application (Kustomize)
+│   ├── kustomization.yaml       # Kustomize конфигурация
+│   ├── base/                    # Kustomize ресурсы
+│   │   ├── deployment.yaml
+│   │   ├── service.yaml
+│   │   ├── ingress.yaml
+│   │   ├── pvc.yaml
+│   │   └── namespace.yaml
+│   └── README.md                # Документация Radarr
+├── bootstrap/                   # IaC: Job извлекает ApiKey из config.xml → Secret buildarr-secrets
+│   ├── bootstrap.yaml          # ArgoCD Application
+│   ├── kustomization.yaml
+│   ├── base/ (rbac, configmap-script, job)
+│   └── README.md
+└── buildarr/                    # IaC: Buildarr Job применяет buildarr.yml к Prowlarr/Radarr
+    ├── buildarr.yaml            # ArgoCD Application
+    ├── kustomization.yaml
+    ├── base/ (configmap buildarr.yml, job)
+    └── README.md
 ```
 
-**Примечание**: Namespace'ы создаются автоматически через `CreateNamespace=true` в Application манифестах.
+**Примечание**: Namespace'ы создаются автоматически через `CreateNamespace=true` в Application манифестах. Для автоматизации конфигурации (Infrastructure as Code) через Buildarr см. [bootstrap/README.md](./bootstrap/README.md) и [buildarr/README.md](./buildarr/README.md).
 
 </details>
 

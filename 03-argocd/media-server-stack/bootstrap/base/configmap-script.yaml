@@ -1,0 +1,92 @@
+---
+# Script run by Bootstrap Job: extract ApiKey from *arr config.xml and update Secret
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: media-stack-bootstrap-script
+  namespace: radarr
+  labels:
+    app: media-stack-bootstrap
+data:
+  bootstrap.sh: |
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    RADARR_CONFIG="${RADARR_CONFIG_MOUNT:-/config-radarr}/config.xml"
+    SECRET_NAME="${BUILDARR_SECRET_NAME:-buildarr-secrets}"
+    SECRET_KEY="buildarr-secret.yml"
+    OUT_FILE="/tmp/buildarr-secret.yml"
+
+    echo "Waiting for Radarr config.xml..."
+    for i in $(seq 1 60); do
+      if [[ -f "$RADARR_CONFIG" ]]; then
+        break
+      fi
+      sleep 2
+    done
+    if [[ ! -f "$RADARR_CONFIG" ]]; then
+      echo "ERROR: Radarr config.xml not found at $RADARR_CONFIG"
+      exit 1
+    fi
+
+    extract_api_key() {
+      local path="$1"
+      if [[ -f "$path" ]]; then
+        sed -n 's/.*<ApiKey>\([^<]*\)<\/ApiKey>.*/\1/p' "$path" | head -1 || true
+      fi
+    }
+    extract_api_key_from_stdin() {
+      sed -n 's/.*<ApiKey>\([^<]*\)<\/ApiKey>.*/\1/p' | head -1 || true
+    }
+    # For piping XML into extraction
+    extract_api_key_xml() {
+      echo "$1" | extract_api_key_from_stdin
+    }
+
+    RADARR_API_KEY=$(extract_api_key "$RADARR_CONFIG")
+    if [[ -z "${RADARR_API_KEY:-}" ]]; then
+      echo "WARN: Radarr ApiKey not found in config.xml (may not be generated yet). Retrying in 30s..."
+      sleep 30
+      RADARR_API_KEY=$(extract_api_key "$RADARR_CONFIG")
+    fi
+    if [[ -z "${RADARR_API_KEY:-}" ]]; then
+      echo "ERROR: Could not extract Radarr ApiKey from $RADARR_CONFIG"
+      exit 1
+    fi
+    echo "Radarr ApiKey extracted."
+
+    PROWLARR_POD=$(kubectl get pods -n prowlarr -l app=prowlarr -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+    if [[ -z "${PROWLARR_POD:-}" ]]; then
+      echo "WARN: Prowlarr pod not found; skipping Prowlarr ApiKey."
+      PROWLARR_API_KEY=""
+    else
+      PROWLARR_XML=$(kubectl exec -n prowlarr "$PROWLARR_POD" -- cat /config/config.xml 2>/dev/null || true)
+      PROWLARR_API_KEY=$(extract_api_key_xml "$PROWLARR_XML")
+      if [[ -z "${PROWLARR_API_KEY:-}" ]]; then
+        echo "WARN: Prowlarr ApiKey not found."
+      else
+        echo "Prowlarr ApiKey extracted."
+      fi
+    fi
+
+    # Build buildarr-secret.yml (only *arr api_key; user adds qbittorrent + jellyfin manually)
+    {
+      echo "---"
+      echo "prowlarr:"
+      echo "  api_key: \"${PROWLARR_API_KEY:-}\""
+      echo "radarr:"
+      echo "  api_key: \"${RADARR_API_KEY}\""
+    } > "$OUT_FILE"
+
+    # Create Secret or patch existing (preserve other keys if any)
+    B64VAL=$(base64 -w0 "$OUT_FILE" 2>/dev/null || base64 < "$OUT_FILE" | tr -d '\n')
+    if kubectl get secret -n radarr "$SECRET_NAME" &>/dev/null; then
+      kubectl patch secret "$SECRET_NAME" -n radarr -p "{\"data\":{\"$SECRET_KEY\":\"$B64VAL\"}}"
+      echo "Patched Secret $SECRET_NAME with key $SECRET_KEY"
+    else
+      kubectl create secret generic "$SECRET_NAME" \
+        --from-file="$SECRET_KEY=$OUT_FILE" \
+        --namespace=radarr
+      echo "Created Secret $SECRET_NAME with $SECRET_KEY"
+    fi
+    echo "Bootstrap complete."
