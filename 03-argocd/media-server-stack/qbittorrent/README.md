@@ -52,11 +52,11 @@
 
 ---
 
-qBittorrent - это свободный BitTorrent клиент с открытым исходным кодом для получения медиа-контента для личной коллекции. Он интегрируется с приложениями управления медиатекой (Radarr) для автоматического получения файлов.
+qBittorrent - это свободный BitTorrent клиент с открытым исходным кодом для организации личной медиатеки. Он интегрируется с приложениями управления медиатекой (Radarr) для автоматической передачи файлов по протоколу BitTorrent.
 
 **Основные возможности:**
 
-- BitTorrent клиент для получения файлов
+- BitTorrent клиент для передачи файлов по протоколу BitTorrent
 - Веб-интерфейс для управления
 - Интеграция с Radarr через API
 - Поддержка категорий для автоматической организации
@@ -347,7 +347,7 @@ kubectl get ingress -n radarr qbittorrent
    # Подождите 1-2 минуты для перезапуска
    ```
 
-4. **Используйте port-forward (обход Ingress):**
+4. **Используйте port-forward (доступ напрямую, без Ingress):**
    ```bash
    kubectl port-forward -n radarr deployment/qbittorrent 8080:8080
    # Откройте: http://localhost:8080
@@ -377,7 +377,7 @@ kubectl get ingress -n radarr qbittorrent
 
 1. **Settings → Connection**:
    - **Port used for incoming connections**: `6881` (уже настроено)
-   - Если используете VPN, настройте соответствующие порты
+   - При использовании VPN в сети настройте порты в Settings → Connection
 
 </details>
 
@@ -721,7 +721,7 @@ kubectl delete secret qbittorrent-tls qbittorrent-tls-ca qbittorrent-tls-chain -
    - Radarr → Activity → Queue - должны быть файлы
 2. Проверьте настройки портов в qBittorrent:
    - Settings → Connection → Port used for incoming connections: `6881`
-3. Проверьте, что порт открыт (если используете VPN, настройте порты)
+3. Проверьте, что порт открыт (при использовании VPN в сети настройте порты в Settings → Connection)
 4. Проверьте логи qBittorrent: `kubectl logs -n radarr deployment/qbittorrent`
 
 ### Radarr не может подключиться к qBittorrent
@@ -844,7 +844,7 @@ kubectl get certificate qbittorrent-tls -n radarr
 
 ### Интеграция с Radarr
 
-qBittorrent интегрируется с Radarr для автоматического получения файлов:
+qBittorrent интегрируется с Radarr для автоматической передачи файлов:
 
 1. **В Radarr**: Settings → Download Clients → Add → qBittorrent
    - **Name**: `qBittorrent`
@@ -914,7 +914,7 @@ kubectl run -it --rm debug --image=curlimages/curl --restart=Never -- \
 ### Настройка портов
 
 - **Port used for incoming connections**: `6881` (уже настроено)
-- Если используете VPN, настройте соответствующие порты в Settings → Connection → Proxy
+- При использовании VPN в сети настройте порты в Settings → Connection
 
 ### Мониторинг загрузок
 
@@ -961,7 +961,7 @@ qBittorrent автоматически получает файлы, отправ
 - Обязательно установите постоянный пароль после первого входа
 - Не отключайте аутентификацию в production
 - Используйте сильный пароль
-- Рассмотрите возможность использования VPN для загрузок
+- При использовании VPN в сети настройте порты в Settings → Connection
 
 </details>
 

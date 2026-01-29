@@ -370,6 +370,40 @@ kubectl exec -n radarr $POD_NAME -- ls -la /media
 kubectl exec -n radarr $POD_NAME -- touch /media/test.txt
 ```
 
+### Поиск фильмов: "Unable to communicate with RadarrAPI / browser content instead of api data"
+
+**Проблема**: При поиске фильма ошибка вида «Site responded with browser content instead of api data» (запрос к api.radarr.video возвращает HTML вместо JSON).
+
+**Возможные причины и что сделать**:
+
+1. **Прокси включён в веб-интерфейсе Radarr**  
+   Если в Radarr задан прокси (Settings → General → Proxy), запросы к api.radarr.video идут через него, и прокси может отдавать HTML вместо JSON.  
+   **Решение**: в настройках прокси Radarr в поле **Bypass / Ignored Addresses** добавьте:
+   ```
+   *.radarr.video,api.radarr.video,*.tmdb.org,image.tmdb.org,*.svc.cluster.local,*.svc,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+   ```
+   Включите **Bypass Proxy for Local Addresses**. Сохраните и повторите поиск.
+
+2. **Прокси на ноде (HTTP_PROXY/HTTPS_PROXY)**  
+   В манифесте задано `NO_PROXY` для api.radarr.video и tmdb. Если на ВМ заданы переменные прокси, перезапустите под после применения манифеста:  
+   `kubectl rollout restart deployment/radarr -n radarr`
+
+3. **DNS на ноде отдаёт перехват/каптив**  
+   На ВМ Kubernetes (192.168.40.145) проверьте DNS. Должен резолвиться реальный api.radarr.video. Проверка с ноды:
+   ```bash
+   curl -sI "https://api.radarr.video/v1/search?q=dark+knight"
+   ```
+   Ожидается ответ с `Content-Type: application/json`. Если приходит HTML — смените DNS на ноде на 8.8.8.8 / 1.1.1.1 (например, в netplan или `/etc/resolv.conf`).
+
+4. **Проверка из пода**  
+   Убедиться, что из пода до API доходит JSON:
+   ```bash
+   kubectl exec -n radarr deployment/radarr -- curl -sI "https://api.radarr.video/v1/search?q=dark+knight"
+   ```
+
+5. **Временный сбой api.radarr.video**  
+   Сообщение об ошибке иногда указывает на временный сбой сервиса — повторите поиск позже.
+
 ### Интеграция с Prowlarr не работает
 
 **Проблема**: Radarr не получает источники от Prowlarr

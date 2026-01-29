@@ -1,0 +1,2 @@
+# Ansible inventory — реальные хосты, не коммитим
+02-ansible/inventory/prod/hosts.yaml

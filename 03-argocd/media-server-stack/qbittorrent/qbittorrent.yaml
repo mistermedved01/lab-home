@@ -1,6 +1,6 @@
 ---
 # ArgoCD Application для qBittorrent
-# qBittorrent - BitTorrent клиент для загрузки медиафайлов
+# qBittorrent - BitTorrent клиент для организации медиатеки
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
