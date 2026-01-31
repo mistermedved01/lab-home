@@ -7,7 +7,7 @@
 # - hostname: имя хоста VM
 # - ssh_authorized_keys: список SSH ключей для доступа
 # - vm_user: имя пользователя для создания
-# - ansible_version: версия Ansible (для ansible-control шаблона)
+# - ansible_package: пакет Ansible для apt (ansible или ansible=VERSION при ansible_version != "latest")
 # ============================================================================
 resource "proxmox_virtual_environment_file" "cloudinit_config" {
   for_each     = var.vm_list
@@ -23,7 +23,7 @@ resource "proxmox_virtual_environment_file" "cloudinit_config" {
         hostname            = each.value.vm_hostname
         ssh_authorized_keys = var.ssh_authorized_keys
         vm_user             = var.vm_user
-        ansible_version     = var.ansible_version
+        ansible_package     = var.ansible_version == "latest" ? "ansible" : "ansible=${var.ansible_version}"
       }
     )
     file_name = "cloud-init-${each.value.vm_hostname}.yaml"

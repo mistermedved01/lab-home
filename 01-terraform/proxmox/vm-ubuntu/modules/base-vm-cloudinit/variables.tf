@@ -193,9 +193,9 @@ variable "network_cidr" {
 }
 
 variable "ansible_version" {
-  description = "Версия Ansible для установки (используется только в ansible-control шаблоне)"
+  description = "Версия Ansible для установки (используется только в ansible-control шаблоне). Укажите 'latest' для установки последней доступной версии из PPA."
   type        = string
-  default     = "13.2.0-1ppa~noble"
+  default     = "13.3.0-1ppa~noble"
 
   validation {
     condition     = length(var.ansible_version) > 0

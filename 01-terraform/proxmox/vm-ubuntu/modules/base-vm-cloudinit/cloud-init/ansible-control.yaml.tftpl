@@ -34,7 +34,7 @@ runcmd:
 
     # Установка в неинтерактивном режиме с автоматическим принятием решений
     # --force-confnew - использовать версию из пакета (перезаписать существующий файл)
-    apt-get install -y -o Dpkg::Options::="--force-confnew" ansible=${ansible_version}
+    apt-get install -y -o Dpkg::Options::="--force-confnew" ${ansible_package}
     
     apt-mark hold ansible
 

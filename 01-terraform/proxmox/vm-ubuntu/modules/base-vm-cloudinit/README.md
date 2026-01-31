@@ -27,7 +27,7 @@ module "vms" {
   network_bridge      = "vmbr0"
   ssh_authorized_keys = [var.ssh_public_key]
   vm_user             = "ubuntu"
-  ansible_version     = "13.2.0-1ppa~noble"
+  ansible_version     = "13.3.0-1ppa~noble"
 
   vm_list = {
     web-server-01 = {
@@ -119,7 +119,7 @@ module "k8s_cluster" {
 | `template_vm_id` | `number` | `9000` | ID шаблона VM для клонирования |
 | `snippets_datastore_id` | `string` | `"local"` | Хранилище для cloud-init snippets |
 | `network_cidr` | `number` | `24` | CIDR маска подсети (например, 24 для /24) |
-| `ansible_version` | `string` | `"13.2.0-1ppa~noble"` | Версия Ansible (используется в ansible-control шаблоне) |
+| `ansible_version` | `string` | `"13.3.0-1ppa~noble"` | Версия Ansible (используется в ansible-control). Для последней из PPA укажите `"latest"`. |
 
 ### Структура vm_list
 
@@ -235,7 +235,7 @@ output "cloudinit_files" {
 - `${hostname}` - имя хоста VM
 - `${vm_user}` - имя пользователя
 - `${ssh_authorized_keys}` - список SSH ключей
-- `${ansible_version}` - версия Ansible (только для ansible-control)
+- `${ansible_package}` - пакет для apt: `ansible` при `ansible_version == "latest"`, иначе `ansible=VERSION` (только для ansible-control)
 
 ## Требования
 
