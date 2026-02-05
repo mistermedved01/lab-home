@@ -46,7 +46,7 @@ resource "local_file" "ansible_inventory" {
     {
       inventory        = var.vm_list
       vm_user          = var.vm_user
-      proxmox_ip       = var.gateway_ip
+      proxmox_ip       = regex("^https?://([^:/]+)", var.proxmox_endpoint)[0]
       proxmox_hostname = var.node_name
     }
   )

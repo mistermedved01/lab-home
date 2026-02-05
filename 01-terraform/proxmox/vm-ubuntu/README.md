@@ -1,6 +1,6 @@
 # Terraform Infrastructure
 
-Этот каталог содержит Terraform конфигурацию для развертывания виртуальных машин в Proxmox и автоматической настройки инфраструктуры Kubernetes с помощью Ansible.
+Этот каталог содержит Terraform конфигурацию для развертывания виртуальных машин на **Ubuntu** в Proxmox и автоматической настройки инфраструктуры Kubernetes с помощью Ansible.
 
 <details>
 <summary><strong>📋Описание</strong></summary>
@@ -9,7 +9,7 @@
 
 Terraform конфигурация автоматизирует:
 
-- **Создание виртуальных машин** в Proxmox VE
+- **Создание виртуальных машин на Ubuntu** в Proxmox VE (образ cloud-init, например Noble)
 - **Настройку cloud-init** для начальной конфигурации VM
 - **Генерацию Ansible inventory** на основе созданных VM
 - **Копирование файлов** на Ansible control VM и Kubernetes control plane
@@ -25,31 +25,30 @@ Terraform конфигурация автоматизирует:
 ---
 
 ```
-01-terraform/
-├── live/                    # Environment-specific конфигурация
-│   ├── main.tf             # Основная конфигурация
-│   ├── variables.tf        # Определение переменных
-│   ├── providers.tf        # Конфигурация провайдеров
-│   ├── versions.tf         # Версии провайдеров
-│   ├── outputs.tf          # Outputs конфигурации
-│   ├── terraform.tfvars    # Значения переменных (не коммитится)
+01-terraform/proxmox/vm-ubuntu/
+├── live/                         # Environment-specific конфигурация
+│   ├── main.tf                   # Основная конфигурация
+│   ├── variables.tf              # Определение переменных
+│   ├── providers.tf              # Конфигурация провайдеров
+│   ├── versions.tf               # Версии провайдеров
+│   ├── outputs.tf                # Outputs конфигурации
+│   ├── terraform.tfvars          # Значения переменных (не коммитится)
 │   ├── terraform.tfvars.example  # Пример конфигурации
-│   ├── backend.tf.example # Конфигурация remote backend (опционально)
-│   ├── keys/               # SSH ключи (не коммитятся)
-│   │   ├── id_ed25519      # Приватный ключ
-│   │   └── id_ed25519.pub  # Публичный ключ
-│   ├── scripts/            # Вспомогательные скрипты
-│   │   ├── push_ansible_files.sh      # Копирование Ansible файлов
+│   ├── keys/                     # SSH ключи (не коммитятся)
+│   │   ├── id_ed25519            # Приватный ключ
+│   │   └── id_ed25519.pub        # Публичный ключ
+│   ├── scripts/                  # Вспомогательные скрипты
+│   │   ├── push_ansible_files.sh       # Копирование Ansible файлов
 │   │   └── push_argocd_applications.sh # Копирование ArgoCD Applications
-│   └── templates/          # Terraform шаблоны
+│   └── templates/                # Terraform шаблоны
 │       └── ansible_inventory.yaml.tftpl  # Шаблон Ansible inventory
-└── modules/                # Переиспользуемые модули
-    └── base-vm-cloudinit/  # Модуль создания VM с cloud-init
+└── modules/                      # Переиспользуемые модули
+    └── base-vm-cloudinit/         # Модуль создания VM с cloud-init
         ├── main.tf
         ├── variables.tf
         ├── outputs.tf
         ├── versions.tf
-        └── cloud-init/      # Cloud-init шаблоны
+        └── cloud-init/            # Cloud-init шаблоны
             ├── ansible-control.yaml.tftpl
             ├── k8s-control.yaml.tftpl
             └── k8s-worker.yaml.tftpl
@@ -73,7 +72,7 @@ Terraform конфигурация автоматизирует:
 
 1. **Скопируйте пример конфигурации:**
    ```bash
-   cd live
+   cd 01-terraform/proxmox/vm-ubuntu/live
    cp terraform.tfvars.example terraform.tfvars
    ```
 
@@ -100,7 +99,7 @@ Terraform конфигурация автоматизирует:
 ### Инициализация и применение
 
 ```bash
-cd live
+cd 01-terraform/proxmox/vm-ubuntu/live
 
 # Инициализация
 terraform init
@@ -129,15 +128,19 @@ Terraform автоматически:
 
 | Переменная | Описание | Обязательная | По умолчанию |
 |------------|----------|--------------|--------------|
-| `proxmox_endpoint` | URL API Proxmox | Да | - |
-| `proxmox_api_token` | API токен | Да | - |
+| `proxmox_endpoint` | URL API Proxmox (например `https://192.168.7.151:8006/`) | Да | - |
+| `proxmox_api_token` | API токен для Terraform | Да | - |
 | `node_name` | Имя узла Proxmox | Нет | `pve-node-01` |
-| `datastore_id` | Хранилище для дисков | Нет | `local-lvm` |
+| `datastore_id` | Хранилище для дисков VM | Нет | `local` |
 | `network_bridge` | Сетевой мост | Нет | `vmbr0` |
-| `gateway_ip` | IP шлюза | Да | - |
-| `template_vm_id` | ID шаблона VM | Нет | `9000` |
-| `ssh_public_key` | Публичный SSH ключ | Да | - |
-| `vm_list` | Список VM для создания | Да | - |
+| `gateway_ip` | IP шлюза для VM | Да | - |
+| `network_cidr` | Маска подсети (например 24) | Нет | `24` |
+| `ssh_public_key` | Публичный SSH ключ для VM | Да | - |
+| `vm_list` | Список VM (vm_hostname, vm_ip, vm_id, vm_cores, vm_memory, vm_disk_size, cloud_init_file, role) | Да | - |
+| `vm_user` | Имя пользователя на VM | Нет | `ubuntu` |
+| `ansible_control_vm_key` | Ключ в vm_list для Ansible control VM | Нет | `ansible_control-01` |
+| `ansible_ssh_key_path` | Путь к SSH ключу для Ansible control VM | Нет | `keys/id_ed25519` |
+| `iso_image` | Путь к ISO в Proxmox (например `local:iso/noble-server-cloudimg-amd64.img`) | Нет | `null` |
 
 Полный список переменных см. в `live/variables.tf`.
 
@@ -155,26 +158,42 @@ terraform apply
 
 ```hcl
 # terraform.tfvars
-proxmox_endpoint = "https://pve.example.com:8006/api2/json"
+proxmox_endpoint = "https://192.168.7.151:8006/"
 proxmox_api_token = "terraform@pve!terraform-token=YOUR_TOKEN"
-
-gateway_ip = "192.168.1.1"
+gateway_ip = "192.168.7.1"
 ssh_public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... user@host"
 
 vm_list = {
-  "ansible-control-01" = {
-    ipv4 = "192.168.1.10"
-    cores = 2
-    memory = 4096
-    disk_size = 20
+  ansible_control-01 = {
+    vm_hostname     = "ansible-control-01"
+    vm_ip           = "192.168.7.161"
+    vm_id           = 1001
+    vm_cores        = 2
+    vm_memory       = 2000
+    vm_disk_size    = 20
+    cloud_init_file = "ansible-control.yaml.tftpl"
+    role            = "ansible"
   }
-  "k8s-control-01" = {
-    ipv4 = "192.168.1.20"
-    cores = 4
-    memory = 8192
-    disk_size = 50
+  k8s_control-01 = {
+    vm_hostname     = "k8s-control-01"
+    vm_ip           = "192.168.7.162"
+    vm_id           = 1002
+    vm_cores        = 4
+    vm_memory       = 6000
+    vm_disk_size    = 30
+    cloud_init_file = "k8s-control.yaml.tftpl"
+    role            = "k8s_control"
   }
-  # ... другие VM
+  k8s_worker-01 = {
+    vm_hostname     = "k8s-worker-01"
+    vm_ip           = "192.168.7.163"
+    vm_id           = 1003
+    vm_cores        = 4
+    vm_memory       = 8000
+    vm_disk_size    = 30
+    cloud_init_file = "k8s-worker.yaml.tftpl"
+    role            = "k8s_worker"
+  }
 }
 ```
 
@@ -185,36 +204,44 @@ vm_list = {
 
 ---
 
-После создания VM, Terraform автоматически:
+После создания VM Terraform автоматически:
 
-1. **Генерирует Ansible inventory** файл (`02-ansible/inventory/prod/hosts.yaml`)
-   - Группирует хосты по ролям (control plane, worker nodes, ansible control)
-   - Добавляет переменные для каждой группы
+1. **Генерирует Ansible inventory** (`02-ansible/inventory/prod/hosts.yaml`):
+   - Группы: `kube_control_plane`, `kube_node`, `k8s_cluster`, `proxmox`
+   - IP VM берутся из `vm_list`; IP хоста Proxmox извлекается из `proxmox_endpoint` (не из gateway)
 
 2. **Копирует файлы на Ansible control VM** через скрипт `push_ansible_files.sh`:
-   - Inventory файл
-   - Playbooks и roles из `02-ansible/playbooks/` и `02-ansible/roles/`
-   - Helm values файлы (из `02-ansible/playbooks/argocd/` и `02-ansible/playbooks/ingress-nginx/`)
-   - SSH ключи
-   - Group variables
+   - Inventory, playbooks, roles, Helm values, SSH ключи, group variables
 
 3. **Копирует ArgoCD Applications** на Kubernetes control plane через скрипт `push_argocd_applications.sh`:
-   - Все файлы из `03-argocd/`
-   - Размещает в `/home/<user>/argocd-applications/`
+   - Файлы из `03-argocd/` в `/home/<user>/argocd-applications/`
+
+### Proxmox в inventory
+
+Группа `proxmox` в inventory используется playbook'ом node-exporter. Хост Proxmox подключается по SSH под пользователем **root**. IP берётся из URL `proxmox_endpoint` (например, из `https://192.168.7.151:8006/` получится `192.168.7.151`). Убедитесь, что на Proxmox настроен вход root по вашему SSH ключу (например, `ssh-copy-id root@<proxmox_ip>`).
+
+### Получение kubeconfig
+
+После выполнения Ansible playbook'ов (control-plane, cni, worker) kubeconfig лежит на control plane ноде:
+- `/etc/kubernetes/admin.conf` (root)
+- `/home/<vm_user>/.kube/config` (пользователь из inventory)
+
+Скопировать на локальную машину:
+```bash
+# IP control plane — из terraform output или inventory
+scp -i keys/id_ed25519 ubuntu@<k8s_control_ip>:~/.kube/config ~/.kube/config-lab-home
+# или с хоста: ssh ubuntu@<k8s_control_ip> "sudo cat /etc/kubernetes/admin.conf" > ~/.kube/config-lab-home
+export KUBECONFIG=~/.kube/config-lab-home
+```
 
 ### Скрипты копирования
 
-**`push_ansible_files.sh`** - копирует Ansible файлы:
-- Выполняется автоматически после создания VM
-- Копирует все необходимые файлы для работы Ansible
-- Настраивает структуру директорий на удаленном хосте
+| Скрипт | Назначение |
+|--------|------------|
+| `push_ansible_files.sh` | Копирование inventory, playbooks, roles, ключей на Ansible control VM |
+| `push_argocd_applications.sh` | Копирование `03-argocd/` на Kubernetes control plane |
 
-**`push_argocd_applications.sh`** - копирует ArgoCD Applications:
-- Выполняется автоматически после создания VM
-- Копирует Applications на control plane ноду
-- Готовит файлы для развертывания через ArgoCD
-
-Подробнее см. `02-ansible/README.md`
+Подробнее см. `02-ansible/README.md`.
 
 </details>
 
@@ -225,41 +252,32 @@ vm_list = {
 
 Модуль `modules/base-vm-cloudinit` создает виртуальные машины в Proxmox с использованием cloud-init для начальной настройки.
 
-### Входные переменные
+### Входные переменные модуля
 
-Основные переменные модуля:
-- `vm_name` - имя виртуальной машины
-- `vm_id` - уникальный ID VM
-- `template_vm_id` - ID шаблона для клонирования
-- `ipv4_address` - IPv4 адрес
-- `cores`, `memory`, `disk_size` - ресурсы VM
-- `ssh_public_key` - публичный SSH ключ
-- `cloud_init_config` - конфигурация cloud-init
+Модуль получает от `live/main.tf`: `proxmox_endpoint`, `proxmox_api_token`, `node_name`, `datastore_id`, `network_bridge`, `ssh_authorized_keys`, `vm_user`, `vm_list`, `gateway_ip`, `network_cidr`, `iso_image`, `snippets_datastore_id`, `disk_datastore_id`, `ansible_version`.
 
-Полный список см. `modules/base-vm-cloudinit/variables.tf`
+Полный список см. в `modules/base-vm-cloudinit/variables.tf`.
 
-### Outputs
+### Outputs (live/outputs.tf)
 
-Модуль экспортирует следующие outputs:
+Конфигурация `live` экспортирует:
 
-- `vms` - Map всех созданных VM с их параметрами
-- `vms_by_hostname` - Map VM по hostname
-- `vm_ips` - Список всех IP адресов
-- `vm_ips_map` - Map IP адресов к hostname
-- `vm_ids_map` - Map VM IDs к hostname
-- `cloudinit_files` - Информация о созданных cloud-init файлах
+| Output | Описание |
+|--------|----------|
+| `vms` | Map всех созданных VM с параметрами |
+| `vms_by_hostname` | Map VM по hostname |
+| `vm_ips` | Список IP адресов VM (CIDR) |
+| `vm_ips_map` | Map IP → hostname |
+| `ansible_control_ip` | IP Ansible control VM |
+| `k8s_control_plane_ips` | IP адреса Kubernetes control plane |
+| `k8s_worker_ips` | IP адреса Kubernetes worker nodes |
 
-### Использование outputs
+### Пример использования outputs
 
-```hcl
-# В live/main.tf или других модулях
-output "all_vm_ips" {
-  value = module.vm-cloudinit.vm_ips
-}
-
-output "ansible_control_ip" {
-  value = module.vm-cloudinit.vms_by_hostname["ansible-control-01"].ipv4
-}
+```bash
+cd live
+terraform output ansible_control_ip
+terraform output k8s_control_plane_ips
 ```
 
 ### Cloud-init шаблоны
@@ -445,49 +463,22 @@ cat ~/.ssh/id_ed25519.pub
 </details>
 
 <details>
-<summary><strong>🔍Валидация и тестирование</strong></summary>
+<summary><strong>🔍Валидация</strong></summary>
 
 ---
 
-### Локальная валидация
-
-Используйте скрипт валидации для проверки конфигурации:
+### Локальная проверка
 
 ```bash
-# Проверка форматирования и синтаксиса
-./scripts/validate.sh
-
-# Автоматическое исправление форматирования
-./scripts/validate.sh --fix
-
-# Только проверка форматирования
-./scripts/validate.sh --check-format
+cd live
+terraform init
+terraform validate
+terraform fmt -check -recursive
 ```
 
-Скрипт выполняет:
-- Проверку форматирования Terraform файлов
-- Валидацию синтаксиса конфигурации
-- Проверку переменных и модулей
-- Базовую проверку безопасности (поиск возможных секретов)
+### Pre-commit (опционально)
 
-### Pre-commit hooks
-
-Для автоматической проверки перед коммитом установите pre-commit hooks:
-
-```bash
-pip install pre-commit
-pre-commit install
-```
-
-Hooks автоматически проверяют:
-- Форматирование Terraform файлов
-- Валидацию синтаксиса
-- Наличие секретов в файлах
-
-### CI/CD валидация
-
-GitHub Actions workflow автоматически валидирует конфигурацию при push и pull request.
-См. `.github/workflows/validate.yml` для деталей.
+При наличии pre-commit в проекте можно настроить проверки перед коммитом (форматирование Terraform, проверка секретов и т.п.).
 
 </details>
 
@@ -527,15 +518,27 @@ terraform show
 ping <vm_ip>
 ```
 
+### pve-node-01: Permission denied (publickey) / UNREACHABLE
+
+**Симптом:** Ansible не подключается к `pve-node-01` (например, `root@192.168.x.x: Permission denied`).
+
+**Причины:** В inventory для группы `proxmox` должен быть IP хоста Proxmox (извлекается из `proxmox_endpoint`). Раньше ошибочно подставлялся `gateway_ip` — это исправлено: после `terraform apply` в inventory попадает хост из URL (например, из `https://192.168.7.151:8006/` → `192.168.7.151`). Дополнительно для playbook node-exporter нужен вход по SSH под **root** на Proxmox.
+
+**Решение:**
+```bash
+# Проверьте hosts.yaml: у pve-node-01 ansible_host должен быть IP Proxmox, не шлюза
+# Добавьте свой ключ на Proxmox для root:
+ssh-copy-id -i ~/.ssh/id_ed25519.pub root@<proxmox_ip>
+# Или пропустите playbook node-exporter: --skip-tags node-exporter
+```
+
 ### Проблемы с копированием файлов Ansible
 
 **Симптом:** Скрипт `push_ansible_files.sh` не может скопировать файлы
 
 **Решение:**
 ```bash
-# Проверьте логи скрипта
-terraform apply  # Смотрите вывод скрипта
-
+# Проверьте вывод при terraform apply
 # Убедитесь, что Ansible control VM доступна по SSH
 ssh -i keys/id_ed25519 ubuntu@<ansible_control_ip>
 
@@ -549,14 +552,10 @@ chmod 600 keys/id_ed25519
 
 **Решение:**
 ```bash
-# Убедитесь, что Terraform >= 1.0 установлен
-terraform version
-
-# Проверьте, что все модули инициализированы
+terraform version   # Terraform >= 1.0
 terraform init
-
-# Запустите валидацию с флагом --fix для автоматического исправления форматирования
-./scripts/validate.sh --fix
+terraform validate
+terraform fmt -recursive   # автоформатирование
 ```
 
 ### Проблемы с State
