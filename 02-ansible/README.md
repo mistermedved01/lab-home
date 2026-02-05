@@ -1,6 +1,6 @@
 # Ansible
 
-Эта директория содержит Ansible playbooks и roles для автоматического развертывания Kubernetes кластера и инфраструктурных приложений.
+Эта директория содержит Ansible playbooks и roles для автоматического развертывания Kubernetes кластера на **Ubuntu** нодах и инфраструктурных приложений.
 
 <details>
 <summary><strong>📋Описание</strong></summary>
@@ -31,7 +31,7 @@
 |
 ├── inventory/               # Inventory по окружениям
 │   └── prod/
-│       ├── hosts.yaml       # Inventory файл (генерируется Terraform)
+│       ├── hosts.yaml       # Inventory (генерируется Terraform из vm-ubuntu/live)
 │       └── group_vars/      # Переменные для групп хостов
 │           ├── all.yaml
 │           ├── kube_control_plane.yaml
@@ -106,18 +106,27 @@
    - Inventory сгенерирован
 
 2. **Доступ к Ansible Control VM:**
-   - SSH ключ: `01-terraform/live/keys/id_ed25519`
-   - IP адрес берется из Terraform output
+   - SSH ключ: `01-terraform/proxmox/vm-ubuntu/live/keys/id_ed25519` (или путь из `ansible_ssh_key_path` в Terraform)
+   - IP адрес: `terraform output ansible_control_ip` (из каталога `01-terraform/proxmox/vm-ubuntu/live`)
 
 ### Полная установка (рекомендуется)
 
+**Вариант A — с Ansible Control VM** (после того как Terraform скопировал туда файлы):
+
 ```bash
 # Подключиться к Ansible Control VM
-ssh -i 01-terraform/live/keys/id_ed25519 ubuntu@<ANSIBLE_CONTROL_IP>
+ssh -i 01-terraform/proxmox/vm-ubuntu/live/keys/id_ed25519 ubuntu@<ANSIBLE_CONTROL_IP>
 
-# Запустить главный playbook
+# Запустить главный playbook (путь на control VM)
 cd /etc/ansible/playbooks
 ansible-playbook site.yml -i inventory/prod/hosts.yaml
+```
+
+**Вариант B — с локальной машины** (если inventory и playbooks есть в репозитории):
+
+```bash
+cd 02-ansible
+ansible-playbook playbooks/site.yml -i inventory/prod/hosts.yaml
 ```
 
 Этот playbook выполнит все шаги автоматически:
@@ -139,21 +148,21 @@ ansible-playbook site.yml -i inventory/prod/hosts.yaml
 
 ### Подключение к Ansible Control VM
 
-После выполнения Terraform, файлы автоматически копируются на Ansible Control VM через скрипт `push_ansible_files.sh`.
+После выполнения Terraform файлы автоматически копируются на Ansible Control VM через скрипт `push_ansible_files.sh`.
 
 ```bash
-ssh -i 01-terraform/live/keys/id_ed25519 ubuntu@<ANSIBLE_CONTROL_IP>
+ssh -i 01-terraform/proxmox/vm-ubuntu/live/keys/id_ed25519 ubuntu@<ANSIBLE_CONTROL_IP>
 ```
 
-IP адрес Ansible Control VM можно получить из Terraform output:
+IP адрес Ansible Control VM:
 ```bash
-cd 01-terraform/live
-terraform output ansible_host_ip
+cd 01-terraform/proxmox/vm-ubuntu/live
+terraform output ansible_control_ip
 ```
 
 ### Пошаговая установка
 
-Если нужно выполнить установку по шагам:
+Если нужно выполнить установку по шагам (путь ниже — на Ansible Control VM; при запуске с локальной машины используйте `cd 02-ansible` и `playbooks/...`):
 
 ```bash
 cd /etc/ansible/playbooks
@@ -182,9 +191,22 @@ ansible-playbook argocd/argocd.yml -i inventory/prod/hosts.yaml
 # Шаг 8: Обновление ingress для ArgoCD (если нужно изменить домен)
 ansible-playbook argocd/argocd-ingress.yml -i inventory/prod/hosts.yaml
 
-# Шаг 9: Установка node_exporter на Proxmox хосты
+# Шаг 9: Установка node_exporter на Proxmox хосты (требуется SSH root на Proxmox)
 ansible-playbook node-exporter/node-exporter.yml -i inventory/prod/hosts.yaml --limit proxmox
+# Если Proxmox недоступен по SSH: --skip-tags node-exporter при запуске site.yml
 ```
+
+### Получение kubeconfig
+
+После инициализации control plane и установки CNI kubeconfig лежит на control plane ноде в `/home/<user>/.kube/config` и в `/etc/kubernetes/admin.conf`. Скопировать на локальную машину:
+
+```bash
+# IP control plane — из inventory или terraform output k8s_control_plane_ips
+scp -i 01-terraform/proxmox/vm-ubuntu/live/keys/id_ed25519 ubuntu@<K8S_CONTROL_IP>:~/.kube/config ~/.kube/config-lab-home
+export KUBECONFIG=~/.kube/config-lab-home
+```
+
+Подробнее см. `01-terraform/proxmox/vm-ubuntu/README.md` (раздел «Получение kubeconfig»).
 
 ### Использование тегов
 
@@ -305,8 +327,13 @@ ansible kube_node -i inventory/prod/hosts.yaml -m ping
 ### Проверка синтаксиса playbook
 
 ```bash
+# С Ansible Control VM
 cd /etc/ansible/playbooks
 ansible-playbook site.yml --syntax-check
+
+# Или с локальной машины
+cd 02-ansible
+ansible-playbook playbooks/site.yml -i inventory/prod/hosts.yaml --syntax-check
 ```
 
 ### Проверка подключения к Kubernetes
@@ -395,9 +422,9 @@ graph TD
 
 ### Интеграция с Terraform
 
-- Inventory файл (`hosts.yaml`) автоматически генерируется Terraform
-- Ansible файлы автоматически копируются на Control VM через `push_ansible_files.sh`
-- Helm values файлы копируются вместе с playbooks автоматически
+- **Inventory** (`inventory/prod/hosts.yaml`) генерируется Terraform; IP Proxmox в группе `proxmox` берётся из `proxmox_endpoint`, не из шлюза
+- Ansible файлы копируются на Control VM через `push_ansible_files.sh`
+- Helm values копируются вместе с playbooks
 
 ### Приложения через ArgoCD
 
@@ -420,7 +447,7 @@ graph TD
    - Helm values: `playbooks/<app>/values.yaml`
 2. Перезапустите Terraform для копирования файлов:
    ```bash
-   cd 01-terraform/live
+   cd 01-terraform/proxmox/vm-ubuntu/live
    terraform apply
    ```
 3. Примените изменения через Ansible:
@@ -444,11 +471,26 @@ graph TD
 # Проверить доступность хостов
 ansible all -i inventory/prod/hosts.yaml -m ping
 
-# Проверить SSH ключ
-ls -la 01-terraform/live/keys/id_ed25519
+# Проверить SSH ключ (путь из Terraform)
+ls -la 01-terraform/proxmox/vm-ubuntu/live/keys/id_ed25519
 
 # Проверить права на ключ
-chmod 600 01-terraform/live/keys/id_ed25519
+chmod 600 01-terraform/proxmox/vm-ubuntu/live/keys/id_ed25519
+```
+
+### pve-node-01: Permission denied / UNREACHABLE
+
+**Симптом:** При запуске `site.yml` хост `pve-node-01` недоступен (`root@...: Permission denied`).
+
+**Причина:** В inventory для группы `proxmox` должен быть IP хоста Proxmox (Terraform берёт его из `proxmox_endpoint`). Для playbook node-exporter нужен вход по SSH под **root** на Proxmox.
+
+**Решение:**
+```bash
+# Добавить ключ на Proxmox для root
+ssh-copy-id -i ~/.ssh/id_ed25519.pub root@<PROXMOX_IP>
+
+# Или пропустить установку node_exporter при полном развертывании
+ansible-playbook playbooks/site.yml -i inventory/prod/hosts.yaml --skip-tags node-exporter
 ```
 
 ### Проблемы с Kubernetes
