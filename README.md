@@ -548,3 +548,58 @@ lab-home/
 </details>
 
 ---
+---
+---
+
+<details>
+<summary><b>☸️Talos Linux — иной вариант установки</b></summary>
+
+---
+
+```mermaid
+graph LR
+    subgraph L1 [1. Инфраструктура]
+        T[Terraform<br/>IaC]
+        P[Proxmox VE<br/>VM Talos]
+    end
+    subgraph L2 [2. Кластер]
+        Tal[Talos<br/>bootstrap]
+        K[Kubernetes<br/>Flannel CNI]
+    end
+    subgraph L3 [3. GitOps и приложения]
+        A[Argo CD<br/>Helm]
+        App[Приложения<br/>03-argocd]
+    end
+    T -->|Создает VM| P
+    P --> Tal
+    Tal -->|Поднимает| K
+    K -->|Хостит| A
+    A -->|Синхр. из Git| App
+```
+
+Используется директория **01-terraform/proxmox/vm-talos** 
+
+**Ansible не используется** - кластер поднимается средствами Terraform и Talos (bootstrap)
+
+Приложения из 03-argocd можно подтянуть из Git.
+
+**Скрипт `start.sh`** (запуск из `01-terraform/proxmox/vm-talos`):
+
+1. Проверяет наличие `terraform.tfvars`, переменной `talos_image_file_id` и инструментов (terraform, helm, kubectl).
+2. Выполняет `terraform init`, `terraform plan` и после подтверждения — `terraform apply` (создание VM Talos в Proxmox, применение конфигурации Talos, bootstrap кластера).
+3. По желанию сохраняет kubeconfig в `~/.kube/<talos_cluster_name>.yaml` и ждёт готовности кластера (до ~5 мин).
+4. Устанавливает **Argo CD** из локального чарта (`fetched/argo-cd-*.tgz`) с values из `platform/argocd/values.yaml`.
+5. Устанавливает **NGINX Ingress Controller** из локального чарта с values из `platform/ingress-nginx/values.yaml` (NodePort 30080/30443).
+6. Выводит сводку: IP нод, URL и пароль Argo CD.
+
+- **Образ Talos:** скачать `./scripts/fetch/fetch-talos.sh`, загрузить полученный образ в Proxmox и указать `talos_image_file_id` в `terraform.tfvars`.
+
+- **Чарты Argo CD и Ingress**: `./scripts/fetch/fetch-argocd.sh` и `./scripts/fetch/fetch-ingress-nginx.sh`.
+
+- Манифесты 03-argocd на ноды не копируются: в Argo CD создаёте Application(s) на репозиторий и путь `03-argocd` или `03-argocd/<приложение>`.
+
+Подробнее: [01-terraform/proxmox/vm-talos/README.md](01-terraform/proxmox/vm-talos/README.md).
+
+</details>
+
+---
