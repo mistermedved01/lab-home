@@ -1,0 +1,28 @@
+talos_cluster_name   = "talos-cluster-01"
+talos_version        = "1.10.6"
+talos_image_file_id  = "local:iso/talos-1.10.6-amd64.img"
+
+proxmox_endpoint       = "https://192.168.40.143:8006/"
+proxmox_iso_datastore   = "local"
+proxmox_image_datastore = "local"
+
+proxmox_username       = "root@pam"
+proxmox_password       = "your_password"
+
+proxmox_control_vm_cores   = 4
+proxmox_worker_vm_cores   = 4
+proxmox_control_vm_memory = 4096
+proxmox_worker_vm_memory  = 4096
+proxmox_vm_type           = "x86-64-v2-AES"
+proxmox_control_vm_disk_size = 30
+proxmox_worker_vm_disk_size  = 30
+proxmox_network_bridge   = "vmbr0"
+# proxmox_network_vlan_id = null   # опционально, по умолчанию null
+
+control_nodes = {
+  "talos-cp-1" = "pve-node-01"
+}
+worker_nodes = {
+  "talos-worker-1" = "pve-node-01"
+  "talos-worker-2" = "pve-node-01"
+}

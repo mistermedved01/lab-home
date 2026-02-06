@@ -1,0 +1,12 @@
+# NGINX Ingress Controller: NodePort (HTTP 30080, HTTPS 30443).
+# Chart template uses controller.service.type and controller.service.nodePorts.
+# IngressClass "nginx" is default so new Ingress resources use this controller.
+
+controller:
+  ingressClassResource:
+    default: true
+  service:
+    type: NodePort
+    nodePorts:
+      http: "30080"
+      https: "30443"

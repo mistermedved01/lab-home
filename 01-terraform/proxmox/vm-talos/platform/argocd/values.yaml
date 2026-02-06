@@ -1,0 +1,43 @@
+# Minimal Argo CD values: Dex disabled (no SSO), single server replica.
+# NGINX Ingress terminates TLS; Argo CD runs HTTP (--insecure) to avoid redirect loop.
+# Access: https://argocd.lab-home.com:30443
+# Ensure argocd.lab-home.com resolves to node IP (DNS/hosts).
+
+global:
+  domain: argocd.lab-home.com
+
+# External URL — used for redirects and links
+configs:
+  cm:
+    url: https://argocd.lab-home.com:30443
+  # Ingress backend uses HTTP port (80) when server.insecure is true
+  params:
+    server.insecure: "true"
+
+dex:
+  enabled: false
+
+# Redis from Docker Hub (ECR public often unreachable or slow)
+redis:
+  image:
+    repository: docker.io/library/redis
+    tag: 7.2.4-alpine
+
+# Workaround: redis-secret-init job uses "argocd admin redis-initial-password"
+# which was removed in Argo CD v2.11. We create the secret before helm install.
+redisSecretInit:
+  enabled: false
+
+server:
+  replicas: 1
+  # Argo CD over HTTP behind nginx; nginx terminates TLS
+  extraArgs:
+    - --insecure
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    hostname: argocd.lab-home.com
+    tls: true
+    annotations:
+      nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
