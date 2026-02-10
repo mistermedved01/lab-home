@@ -17,6 +17,9 @@ spec:
         cleanPrometheusOperatorObjectNames: true
         prometheusOperator:
           enabled: true
+          # Отключаем admission webhooks, чтобы PreSync Job не блокировала синк в Argo CD
+          admissionWebhooks:
+            enabled: false
 
         prometheus:
           enabled: true
