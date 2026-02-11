@@ -1,0 +1,78 @@
+---
+# ArgoCD Application для Harbor
+# Harbor — registry образов Docker/OCI с веб-интерфейсом
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: harbor
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/goharbor/harbor-helm.git
+    path: .
+    targetRevision: v1.18.2
+    helm:
+      values: |
+        externalURL: https://harbor.lab-home.com
+
+        # Пароль admin: сменить после первого входа или задать через existingSecretAdminPassword (см. README)
+        harborAdminPassword: "ChangeMeAfterInstall"
+
+        expose:
+          type: ingress
+          tls:
+            enabled: true
+            certSource: secret
+            secret:
+              secretName: harbor-tls
+          ingress:
+            hosts:
+              core: harbor.lab-home.com
+            className: nginx
+            annotations:
+              cert-manager.io/cluster-issuer: "selfsigned-issuer"
+              nginx.ingress.kubernetes.io/ssl-redirect: "true"
+              nginx.ingress.kubernetes.io/proxy-body-size: "0"
+              nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+
+        persistence:
+          enabled: true
+          persistentVolumeClaim:
+            registry:
+              storageClass: ""
+              size: 5Gi
+            jobservice:
+              jobLog:
+                storageClass: ""
+                size: 1Gi
+            database:
+              storageClass: ""
+              size: 1Gi
+            redis:
+              storageClass: ""
+              size: 1Gi
+            trivy:
+              storageClass: ""
+              size: 5Gi
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: harbor
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
