@@ -3,7 +3,7 @@
 Эта директория содержит ArgoCD Applications для управления приложениями в Kubernetes кластере через GitOps.
 
 <details>
-<summary><strong>🚀Быстрый старт</strong></summary>
+<summary><strong>🚀 Быстрый старт</strong></summary>
 
 ---
 
@@ -33,9 +33,11 @@
    kubectl apply -f 03-argocd/media-server-stack/prowlarr/prowlarr.yaml
    kubectl apply -f 03-argocd/media-server-stack/qbittorrent/qbittorrent.yaml
    kubectl apply -f 03-argocd/media-server-stack/radarr/radarr.yaml
-   kubectl apply -f 03-argocd/minio/minio-operator.yaml
-   # После готовности Operator, развернуть Tenant:
-   kubectl apply -f 03-argocd/minio/minio-tenant-app.yaml
+   kubectl apply -f 03-argocd/n8n/n8n.yaml
+   kubectl apply -f 03-argocd/harbor/harbor.yaml
+   kubectl apply -f 03-argocd/minio/operator/application.yaml
+   # После готовности Operator развернуть Tenant:
+   kubectl apply -f 03-argocd/minio/tenant/application.yaml
    ```
 
 📋**Детальные инструкции:** см. README каждого приложения в соответствующих директориях
@@ -43,7 +45,7 @@
 </details>
 
 <details>
-<summary><strong>📋Структура</strong></summary>
+<summary><strong>📋 Структура</strong></summary>
 
 ---
 
@@ -63,6 +65,9 @@
 ├── prometheus-stack/
 │   ├── prometheus-stack.yaml          # ArgoCD Application (Helm)
 │   └── README.md                      # Документация
+├── harbor/
+│   ├── harbor.yaml                    # ArgoCD Application (Helm chart, источник: Git)
+│   └── README.md                      # Документация
 ├── homepage/
 │   ├── homepage.yaml                  # ArgoCD Application (Kustomize)
 │   ├── kustomization.yaml            # Kustomize конфигурация
@@ -72,6 +77,16 @@
 │   │   ├── ingress.yaml
 │   │   ├── configmap.yaml
 │   │   └── namespace.yaml
+│   └── README.md                      # Документация
+├── n8n/
+│   ├── n8n.yaml                       # ArgoCD Application (Kustomize)
+│   ├── kustomization.yaml             # Kustomize конфигурация
+│   ├── base/                          # Kustomize ресурсы
+│   │   ├── namespace.yaml
+│   │   ├── pvc.yaml
+│   │   ├── deployment.yaml
+│   │   ├── service.yaml
+│   │   └── ingress.yaml
 │   └── README.md                      # Документация
 ├── media-server-stack/                # Медиа-стек приложений
 │   ├── README.md                      # Общая документация стека
@@ -116,8 +131,12 @@
 │       │   └── namespace.yaml
 │       └── README.md                  # Документация
 ├── minio/
-│   ├── minio-operator.yaml            # ArgoCD Application (Helm)
-│   ├── minio-tenant.yaml              # MinIO Tenant CRD
+│   ├── operator/
+│   │   └── application.yaml          # ArgoCD Application (Helm, MinIO Operator)
+│   ├── tenant/
+│   │   ├── application.yaml          # ArgoCD Application (Tenant)
+│   │   ├── ingress.yaml
+│   │   └── tenant.yaml                # MinIO Tenant CRD
 │   └── README.md                      # Документация
 └── README.md                          # Этот файл
 ```
@@ -125,7 +144,7 @@
 </details>
 
 <details>
-<summary><strong>📋Предварительные требования</strong></summary>
+<summary><strong>📋 Предварительные требования</strong></summary>
 
 ---
 
@@ -154,12 +173,14 @@
    argocd app list
    ```
 
-6. **Git репозиторий настроен в ArgoCD** (для Homepage, Jellyfin, Prowlarr, Radarr)
+6. **cert-manager развёрнут до приложений с TLS** (см. порядок развертывания)
+
+7. **Git репозиторий настроен в ArgoCD** (для Homepage, n8n, Jellyfin, Prowlarr, Radarr, MinIO Tenant)
 
 </details>
 
 <details>
-<summary><strong>📋Доступные приложения</strong></summary>
+<summary><strong>📋 Доступные приложения</strong></summary>
 
 ---
 
@@ -202,6 +223,16 @@ CI/CD платформа и управление репозиториями (о�
 - **URL**: `https://grafana.lab-home.com`
 - **Документация**: [`prometheus-stack/README.md`](prometheus-stack/README.md)
 
+### Harbor
+
+Registry образов Docker/OCI с веб-интерфейсом, сканированием уязвимостей и управлением проектами.
+
+- **Файл**: `03-argocd/harbor/harbor.yaml`
+- **Namespace**: `harbor`
+- **Тип**: Helm chart (источник: Git)
+- **URL**: `https://harbor.lab-home.com`
+- **Документация**: [`harbor/README.md`](harbor/README.md)
+
 ### Homepage
 
 Современная домашняя страница/дашборд для самохостинга.
@@ -211,6 +242,16 @@ CI/CD платформа и управление репозиториями (о�
 - **Тип**: Kustomize
 - **URL**: `https://homepage.lab-home.com`
 - **Документация**: [`homepage/README.md`](homepage/README.md)
+
+### n8n
+
+Workflow-автоматизация и интеграции (self-hosted).
+
+- **Файл**: `03-argocd/n8n/n8n.yaml`
+- **Namespace**: `n8n`
+- **Тип**: Kustomize
+- **URL**: `https://n8n.lab-home.com`
+- **Документация**: [`n8n/README.md`](n8n/README.md)
 
 ### Jellyfin
 
@@ -256,16 +297,16 @@ BitTorrent клиент для загрузки медиафайлов, инте
 
 S3-совместимое объектное хранилище для работы с Buckets в Rancher.
 
-- **Файл**: `03-argocd/minio/minio-operator.yaml`
-- **Namespace**: `minio-operator`
-- **Тип**: Helm chart (Operator) + CRD (Tenant)
+- **Operator**: `03-argocd/minio/operator/application.yaml` (Helm), namespace `minio-operator`
+- **Tenant**: `03-argocd/minio/tenant/application.yaml` (после готовности Operator)
+- **Тип**: Helm chart (Operator) + Kustomize/Git (Tenant)
 - **URL**: `https://minio.lab-home.com` (Console)
 - **Документация**: [`minio/README.md`](minio/README.md)
 
 </details>
 
 <details>
-<summary><strong>⚙️Использование</strong></summary>
+<summary><strong>⚙️ Использование</strong></summary>
 
 ---
 
@@ -286,8 +327,14 @@ kubectl apply -f 03-argocd/rancher/rancher.yaml
 # Prometheus Stack
 kubectl apply -f 03-argocd/prometheus-stack/prometheus-stack.yaml
 
+# Harbor
+kubectl apply -f 03-argocd/harbor/harbor.yaml
+
 # Homepage
 kubectl apply -f 03-argocd/homepage/homepage.yaml
+
+# n8n
+kubectl apply -f 03-argocd/n8n/n8n.yaml
 
 # Jellyfin
 kubectl apply -f 03-argocd/media-server-stack/jellyfin/jellyfin.yaml
@@ -301,8 +348,9 @@ kubectl apply -f 03-argocd/media-server-stack/radarr/radarr.yaml
 # qBittorrent
 kubectl apply -f 03-argocd/media-server-stack/qbittorrent/qbittorrent.yaml
 
-# MinIO Operator
-kubectl apply -f 03-argocd/minio/minio-operator.yaml
+# MinIO Operator (затем Tenant после готовности Operator)
+kubectl apply -f 03-argocd/minio/operator/application.yaml
+kubectl apply -f 03-argocd/minio/tenant/application.yaml
 ```
 
 **Применение всех Applications:**
@@ -340,11 +388,11 @@ ArgoCD автоматически синхронизирует Applications пр
 </details>
 
 <details>
-<summary><strong>⚠️Порядок развертывания приложений</strong></summary>
+<summary><strong>⚠️ Порядок развертывания приложений</strong></summary>
 
 ---
 
-⚠️**КРИТИЧЕСКИ ВАЖНО:** Соблюдайте правильный порядок развертывания для приложений, использующих TLS:
+⚠️ **КРИТИЧЕСКИ ВАЖНО:** Соблюдайте правильный порядок развертывания для приложений, использующих TLS:
 
 ### 1. cert-manager (обязательно первым)
 
@@ -379,8 +427,14 @@ kubectl apply -f 03-argocd/rancher/rancher.yaml
 # Prometheus Stack (Grafana)
 kubectl apply -f 03-argocd/prometheus-stack/prometheus-stack.yaml
 
+# Harbor
+kubectl apply -f 03-argocd/harbor/harbor.yaml
+
 # Homepage
 kubectl apply -f 03-argocd/homepage/homepage.yaml
+
+# n8n
+kubectl apply -f 03-argocd/n8n/n8n.yaml
 
 # Jellyfin
 kubectl apply -f 03-argocd/media-server-stack/jellyfin/jellyfin.yaml
@@ -394,8 +448,9 @@ kubectl apply -f 03-argocd/media-server-stack/radarr/radarr.yaml
 # qBittorrent
 kubectl apply -f 03-argocd/media-server-stack/qbittorrent/qbittorrent.yaml
 
-# MinIO Operator
-kubectl apply -f 03-argocd/minio/minio-operator.yaml
+# MinIO Operator и Tenant
+kubectl apply -f 03-argocd/minio/operator/application.yaml
+kubectl apply -f 03-argocd/minio/tenant/application.yaml
 ```
 
 **Если приложение развернуто до ClusterIssuer:**
@@ -415,6 +470,9 @@ kubectl delete secret grafana-tls grafana-tls-ca grafana-tls-chain -n monitoring
 # Для Homepage
 kubectl delete secret homepage-tls homepage-tls-ca homepage-tls-chain -n homepage
 
+# Для n8n
+kubectl delete secret n8n-tls n8n-tls-ca n8n-tls-chain -n n8n
+
 # Для Jellyfin
 kubectl delete secret jellyfin-tls jellyfin-tls-ca jellyfin-tls-chain -n jellyfin
 
@@ -430,6 +488,9 @@ kubectl delete secret qbittorrent-tls qbittorrent-tls-ca qbittorrent-tls-chain -
 # Для MinIO Console
 kubectl delete secret minio-console-tls minio-console-tls-ca minio-console-tls-chain -n minio-operator
 
+# Для Harbor
+kubectl delete secret harbor-tls harbor-tls-ca harbor-tls-chain -n harbor
+
 # cert-manager автоматически создаст новые секреты
 # Проверить статус Certificate
 kubectl get certificate -A
@@ -440,7 +501,7 @@ kubectl get certificate -A
 </details>
 
 <details>
-<summary><strong>📊Архитектура развертывания</strong></summary>
+<summary><strong>📊 Архитектура развертывания</strong></summary>
 
 ---
 
@@ -455,7 +516,9 @@ graph TB
         GitLab[GitLab<br/>CI/CD Platform]
         Rancher[Rancher<br/>K8s Management]
         Prometheus[Prometheus Stack<br/>Monitoring]
+        Harbor[Harbor<br/>Container Registry]
         Homepage[Homepage<br/>Dashboard]
+        N8n[n8n<br/>Workflow Automation]
         Jellyfin[Jellyfin<br/>Media Server]
         Prowlarr[Prowlarr<br/>Indexer Manager]
         Radarr[Radarr<br/>Movie Manager]
@@ -470,7 +533,9 @@ graph TB
     ArgoCD --> GitLab
     ArgoCD --> Rancher
     ArgoCD --> Prometheus
+    ArgoCD --> Harbor
     ArgoCD --> Homepage
+    ArgoCD --> N8n
     ArgoCD --> Jellyfin
     ArgoCD --> Prowlarr
     ArgoCD --> Radarr
@@ -478,7 +543,9 @@ graph TB
     CertManager -.->|TLS| GitLab
     CertManager -.->|TLS| Rancher
     CertManager -.->|TLS| Prometheus
+    CertManager -.->|TLS| Harbor
     CertManager -.->|TLS| Homepage
+    CertManager -.->|TLS| N8n
     CertManager -.->|TLS| Jellyfin
     CertManager -.->|TLS| Prowlarr
     CertManager -.->|TLS| Radarr
@@ -486,7 +553,9 @@ graph TB
     Ingress --> GitLab
     Ingress --> Rancher
     Ingress --> Prometheus
+    Ingress --> Harbor
     Ingress --> Homepage
+    Ingress --> N8n
     Ingress --> Jellyfin
     Ingress --> Prowlarr
     Ingress --> Radarr
@@ -494,6 +563,8 @@ graph TB
     GitLab --> Storage
     Rancher --> Storage
     Prometheus --> Storage
+    Harbor --> Storage
+    N8n --> Storage
     Jellyfin --> Storage
     Prowlarr --> Storage
     Radarr --> Storage
@@ -505,9 +576,15 @@ graph TB
 </details>
 
 <details>
-<summary><strong>🔧Устранение неполадок</strong></summary>
+<summary><strong>🔧 Устранение неполадок</strong></summary>
 
 ---
+
+### Prometheus Stack: синк зависает на «waiting for completion of hook»
+
+**Причина:** Чарт kube-prometheus-stack создаёт PreSync Job для admission webhooks; Argo CD ждёт её завершения, и синк может зависнуть.
+
+**Решение:** В нашем манифесте уже отключены webhooks: `prometheusOperator.admissionWebhooks.enabled: false`. Не удаляйте эту настройку. Если разворачивали стек без неё — добавьте в values и выполните Sync (при необходимости с опцией Replace).
 
 ### Application не синхронизируется
 
@@ -560,7 +637,7 @@ argocd repo add https://github.com/YOUR_USERNAME/YOUR_REPO.git --name lab-home -
 </details>
 
 <details>
-<summary><strong>💡Подходы к развертыванию</strong></summary>
+<summary><strong>💡 Подходы к развертыванию</strong></summary>
 
 ---
 
@@ -575,15 +652,15 @@ argocd repo add https://github.com/YOUR_USERNAME/YOUR_REPO.git --name lab-home -
 
 ### Типы источников
 
-**Helm charts** (cert-manager, GitLab, Rancher, Prometheus Stack):
+**Helm charts** (cert-manager, GitLab, Rancher, Prometheus Stack, Harbor):
 - Один файл с inline Helm values
-- Helm chart из репозитория
+- Chart из Helm repo или из Git (Harbor — из goharbor/harbor-helm)
 - Простая структура
 
-**Kustomize** (Homepage, Jellyfin, Prowlarr, Radarr, qBittorrent):
-- Несколько манифестов в папке `base/`
+**Kustomize** (Homepage, n8n, Jellyfin, Prowlarr, Radarr, qBittorrent, MinIO Tenant):
+- Манифесты в папке `base/` или в подкаталогах
 - `kustomization.yaml` объединяет ресурсы
-- Требует Git репозиторий в ArgoCD
+- Требует Git репозиторий в ArgoCD (кроме приложений с Helm из внешнего repo)
 
 ### Автоматическая синхронизация
 
@@ -596,7 +673,7 @@ ArgoCD автоматически синхронизирует Applications пр
 </details>
 
 <details>
-<summary><strong>🔒Безопасность и TLS</strong></summary>
+<summary><strong>🔒 Безопасность и TLS</strong></summary>
 
 ---
 
