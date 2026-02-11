@@ -433,6 +433,10 @@ kubectl get all -n monitoring
 
 В конфигурации включен `ServerSideApply=true` в syncOptions для решения проблемы с длинными annotations при установке CRD. Это позволяет ArgoCD устанавливать CRD без ошибок "metadata.annotations: Too long".
 
+#### Admission Webhooks отключены
+
+В конфигурации задано `prometheusOperator.admissionWebhooks.enabled: false`. Чарт по умолчанию создаёт PreSync Job для вебхуков; в Argo CD синк тогда зависает в ожидании завершения этой Job. Отключение webhooks убирает блокировку — развёртывание и обновления проходят без ручного Sync/Replace. **Не включайте admissionWebhooks**, если используете Argo CD для этого приложения.
+
 #### cleanPrometheusOperatorObjectNames
 
 Включен `cleanPrometheusOperatorObjectNames: true` для совместимости с ArgoCD и предотвращения конфликтов меток.
@@ -633,7 +637,7 @@ kubectl get ingress,certificate -n monitoring
 
 ### Ошибка "An error occurred within the plugin" в Grafana
 
-**Причина**: Grafana не может подключиться к Prometheus
+**Причина**: Grafana не может подключиться к Prometheus (часто из-за того, что под Prometheus не создан — синк Argo CD завис на PreSync hook; в нашем манифесте webhooks отключены, чтобы этого не было).
 
 **Решение**:
 ```bash
