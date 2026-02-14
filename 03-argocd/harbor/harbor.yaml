@@ -59,6 +59,12 @@ spec:
               storageClass: ""
               size: 5Gi
 
+        # Метрики Prometheus и ServiceMonitor для Grafana
+        metrics:
+          enabled: true
+          serviceMonitor:
+            enabled: true
+
   destination:
     server: https://kubernetes.default.svc
     namespace: harbor
