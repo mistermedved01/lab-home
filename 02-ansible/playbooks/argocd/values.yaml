@@ -5,7 +5,11 @@
 server:
   # Количество реплик
   replicas: 1
-  
+  # Метрики Prometheus и ServiceMonitor для Grafana
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
   # Настройки ingress (требует ingress-nginx)
   ingress:
     enabled: true
@@ -34,6 +38,11 @@ server:
 # Настройки контроллера
 controller:
   replicas: 1
+  # Метрики Prometheus и ServiceMonitor для Grafana
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
   resources:
     requests:
       cpu: 250m
