@@ -15,9 +15,9 @@ spec:
     repoURL: https://github.com/mistermedved01/lab-home.git
     path: 03-argocd/harbor/helm
     targetRevision: main
-  helm:
-    valueFiles:
-      - env/lab-home.yaml
+    helm:
+      valueFiles:
+        - env/lab-home.yaml
 
   destination:
     server: https://kubernetes.default.svc
