@@ -1,0 +1,4 @@
+# Default values for helm (wrapper chart).
+# Переопределения — в env/<окружение>.yaml (например env/lab-home.yaml)
+
+harbor: {}

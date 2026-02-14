@@ -25,7 +25,7 @@
 
 3. **Примените ArgoCD Application для Harbor:**
    ```bash
-   kubectl apply -f 03-argocd/harbor/harbor.yaml
+   kubectl apply -f 03-argocd/harbor/application.yaml
    ```
 
 4. **Дождитесь готовности (5–15 минут):**
@@ -93,7 +93,7 @@ graph TB
 
 ### Основные параметры
 
-- **Файл Application**: `03-argocd/harbor/harbor.yaml`
+- **Файл Application**: `03-argocd/harbor/application.yaml`
 - **Namespace**: `harbor`
 - **Тип источника**: Git (чарт из [goharbor/harbor-helm](https://github.com/goharbor/harbor-helm)), версия по тегу `v1.18.2`
 - **URL**: `https://harbor.lab-home.com`
@@ -107,11 +107,17 @@ graph TB
 
 ```
 harbor/
-├── harbor.yaml   # ArgoCD Application манифест с inline Helm values (источник: Git)
-└── README.md     # Этот файл
+├── application.yaml         # Application
+├── helm/                    # Локальный chart, переопределение через env
+│   ├── Chart.yaml
+│   ├── values.yaml
+│   ├── env/
+│   │   └── lab-home.yaml
+│   └── charts/              # harbor-*.tgz (helm dependency update)
+└── README.md
 ```
 
-**Примечание**: Namespace `harbor` создаётся автоматически через `CreateNamespace=true` в `harbor.yaml`.
+**Примечание**: Namespace `harbor` создаётся автоматически через `CreateNamespace=true`.
 
 </details>
 
@@ -187,7 +193,7 @@ kubectl get clusterissuer selfsigned-issuer
 ### 4. Применение ArgoCD Application для Harbor
 
 ```bash
-kubectl apply -f 03-argocd/harbor/harbor.yaml
+kubectl apply -f 03-argocd/harbor/application.yaml
 kubectl get application harbor -n argocd
 kubectl describe application harbor -n argocd
 ```
@@ -315,7 +321,7 @@ kubectl get all -n harbor
 
 1. **Сменить после первого входа** в веб-интерфейсе: *Administration → Users → admin → Change Password*.
 
-2. **Задать до развертывания** в `harbor.yaml` (не коммитьте реальные пароли в Git):
+2. **Задать до развертывания** в `helm/env/lab-home.yaml` (не коммитьте реальные пароли в Git):
    ```yaml
    harborAdminPassword: "ВашПароль"
    ```
@@ -330,7 +336,7 @@ kubectl get all -n harbor
 
 ### Хранилище и StorageClass
 
-По умолчанию используется default StorageClass кластера. Чтобы задать свой (например, `local-path`), в блоке `persistence.persistentVolumeClaim` в `harbor.yaml`:
+По умолчанию используется default StorageClass кластера. Чтобы задать свой (например, `local-path`), в блоке `persistence.persistentVolumeClaim` в `helm/env/lab-home.yaml`:
 
 ```yaml
 persistence:
@@ -357,7 +363,7 @@ persistence:
 
 ### Изменение домена (externalURL)
 
-В `harbor.yaml` в `helm.values` измените:
+В `helm/env/lab-home.yaml` измените:
 
 ```yaml
 externalURL: https://ваш-домен.lab-home.com
@@ -373,7 +379,7 @@ expose:
 
 Текущая конфигурация использует **Git** (репозиторий [goharbor/harbor-helm](https://github.com/goharbor/harbor-helm), `path: .`, `targetRevision: v1.18.2`), чтобы избежать таймаутов при обращении к `helm.goharbor.io` из кластера.
 
-Чтобы переключиться на **Helm repo**, в `harbor.yaml` замените блок source:
+Чтобы переключиться на **Helm repo**, в `helm/Chart.yaml` измените dependency `repository`:
 
 ```yaml
 source:
@@ -465,7 +471,7 @@ argocd app sync harbor
 1. Разверните cert-manager и дождитесь готовности подов.
 2. Создайте ClusterIssuer (`clusterissuer-selfsigned.yaml`).
 3. Убедитесь, что `kubectl get clusterissuer selfsigned-issuer` показывает Ready.
-4. Только после этого применяйте `harbor.yaml`.
+4. Только после этого применяйте Application.
 
 **Если Harbor развернут до ClusterIssuer**
 
@@ -477,7 +483,7 @@ kubectl get certificate -n harbor
 
 **Для production (Let's Encrypt)**
 
-В `harbor.yaml` в аннотациях Ingress замените:
+В `helm/env/lab-home.yaml` в аннотациях Ingress замените:
 
 ```yaml
 cert-manager.io/cluster-issuer: "letsencrypt-prod"
