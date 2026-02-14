@@ -304,12 +304,16 @@ kubectl get ingress -n monitoring
 
 ### Доступ к Prometheus
 
-Prometheus доступен через port-forward (по умолчанию не имеет Ingress):
+Prometheus доступен по Ingress: **https://prometheus.lab-home.com**
 
+Добавьте в `/etc/hosts` (или DNS):
+```
+<IP-узла или ingress-контроллера>  prometheus.lab-home.com
+```
+
+Альтернатива — port-forward:
 ```bash
-# Port-forward для доступа к Prometheus
 kubectl port-forward -n monitoring svc/prometheus-stack-kube-prom-prometheus 9090:9090
-
 # Откройте http://localhost:9090 в браузере
 ```
 

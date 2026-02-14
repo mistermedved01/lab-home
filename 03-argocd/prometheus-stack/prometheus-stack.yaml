@@ -23,6 +23,21 @@ spec:
 
         prometheus:
           enabled: true
+          ingress:
+            enabled: true
+            ingressClassName: nginx
+            annotations:
+              cert-manager.io/cluster-issuer: "selfsigned-issuer"
+              nginx.ingress.kubernetes.io/ssl-redirect: "true"
+              nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+            hosts:
+              - prometheus.lab-home.com
+            paths:
+              - /
+            tls:
+              - secretName: prometheus-tls
+                hosts:
+                  - prometheus.lab-home.com
           prometheusSpec:
             replicas: 1
             retention: 1d
