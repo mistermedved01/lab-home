@@ -28,8 +28,20 @@ redis:
 redisSecretInit:
   enabled: false
 
+# Метрики controller для Prometheus/Grafana
+controller:
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+
 server:
   replicas: 1
+  # Метрики Prometheus и ServiceMonitor для Grafana
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
   # Argo CD over HTTP behind nginx; nginx terminates TLS
   extraArgs:
     - --insecure
