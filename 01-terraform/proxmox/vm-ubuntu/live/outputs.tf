@@ -1,80 +1,54 @@
 # ============================================================================
-# Outputs для live конфигурации
-# ============================================================================
-# Экспортирует информацию о созданной инфраструктуре для использования
-# в других модулях, скриптах или для отображения после применения конфигурации.
+# Outputs для live конфигурации (объединённые данные по всем узлам Proxmox)
 # ============================================================================
 
 # ----------------------------------------------------------------------------
 # Все созданные VM
 # ----------------------------------------------------------------------------
-# Map всех созданных VM с их основными параметрами (id, name, node, ipv4, hostname).
-# Ключи соответствуют ключам из vm_list.
-# ----------------------------------------------------------------------------
 output "vms" {
   description = "Map всех созданных VM с их параметрами"
-  value       = module.vm-cloudinit.vms
+  value       = merge(module.vm_cloudinit_pve_node_01.vms, module.vm_cloudinit_pve_node_02.vms)
 }
 
 # ----------------------------------------------------------------------------
 # VM по hostname
 # ----------------------------------------------------------------------------
-# Map VM по hostname для удобного поиска. Содержит расширенную информацию:
-# key, id, node, ipv4, cores, memory_mb, disk_size_gb.
-# ----------------------------------------------------------------------------
 output "vms_by_hostname" {
   description = "Map VM по hostname для удобного поиска"
-  value       = module.vm-cloudinit.vms_by_hostname
+  value       = local.merged_vms_by_hostname
 }
 
 # ----------------------------------------------------------------------------
 # Список всех IP адресов
 # ----------------------------------------------------------------------------
-# Список всех IP адресов созданных VM в формате CIDR (например, "192.168.1.10/24").
-# Полезно для создания firewall правил или load balancer конфигураций.
-# ----------------------------------------------------------------------------
 output "vm_ips" {
   description = "Список всех IP адресов созданных VM"
-  value       = module.vm-cloudinit.vm_ips
+  value       = concat(module.vm_cloudinit_pve_node_01.vm_ips, module.vm_cloudinit_pve_node_02.vm_ips)
 }
 
 # ----------------------------------------------------------------------------
 # Map IP адресов к hostname
 # ----------------------------------------------------------------------------
-# Обратный lookup: по IP адресу можно найти hostname VM.
-# Полезно для логирования или мониторинга.
-# ----------------------------------------------------------------------------
 output "vm_ips_map" {
   description = "Map IP адресов к hostname VM"
-  value       = module.vm-cloudinit.vm_ips_map
+  value       = merge(module.vm_cloudinit_pve_node_01.vm_ips_map, module.vm_cloudinit_pve_node_02.vm_ips_map)
 }
 
 # ----------------------------------------------------------------------------
 # IP адрес Ansible control VM
 # ----------------------------------------------------------------------------
-# IP адрес VM, которая используется как Ansible control node.
-# Определяется по ansible_control_vm_key из переменных.
-# Используется для подключения и выполнения Ansible playbooks.
-# ----------------------------------------------------------------------------
 output "ansible_control_ip" {
   description = "IP адрес Ansible control VM"
-  value = try(
-    module.vm-cloudinit.vms_by_hostname[var.vm_list[var.ansible_control_vm_key].vm_hostname].ipv4,
-    null
-  )
+  value       = try(local.merged_vms_by_hostname[var.vm_list[var.ansible_control_vm_key].vm_hostname].ipv4, null)
 }
 
 # ----------------------------------------------------------------------------
 # IP адреса Kubernetes control plane nodes
 # ----------------------------------------------------------------------------
-# Список IP адресов всех Kubernetes control plane nodes (мастеров).
-# Фильтруются VM с ролью "k8s_control" из vm_list.
-# Используется для настройки кластера Kubernetes.
-# ----------------------------------------------------------------------------
 output "k8s_control_plane_ips" {
   description = "IP адреса Kubernetes control plane nodes"
   value = [
-    for k, vm in var.vm_list : module.vm-cloudinit.vms_by_hostname[vm.vm_hostname].ipv4
+    for k, vm in var.vm_list : local.merged_vms_by_hostname[vm.vm_hostname].ipv4
     if vm.role == "k8s_control"
   ]
 }
@@ -82,15 +56,10 @@ output "k8s_control_plane_ips" {
 # ----------------------------------------------------------------------------
 # IP адреса Kubernetes worker nodes
 # ----------------------------------------------------------------------------
-# Список IP адресов всех Kubernetes worker nodes.
-# Фильтруются VM с ролью "k8s_worker" из vm_list.
-# Используется для настройки worker nodes в кластере.
-# ----------------------------------------------------------------------------
 output "k8s_worker_ips" {
   description = "IP адреса Kubernetes worker nodes"
   value = [
-    for k, vm in var.vm_list : module.vm-cloudinit.vms_by_hostname[vm.vm_hostname].ipv4
+    for k, vm in var.vm_list : local.merged_vms_by_hostname[vm.vm_hostname].ipv4
     if vm.role == "k8s_worker"
   ]
 }
-

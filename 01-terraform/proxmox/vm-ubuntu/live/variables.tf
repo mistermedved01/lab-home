@@ -1,17 +1,31 @@
-variable "proxmox_endpoint" {
-  description = "URL API Proxmox (например https://192.168.40.143:8006/)"
-  type        = string
+variable "proxmox_nodes" {
+  description = "Map узлов Proxmox: ключ — идентификатор ноды (например pve-node-01), значение — endpoint, api_token, node_name, datastore_id, network_bridge"
+  type = map(object({
+    endpoint       = string
+    api_token      = string
+    node_name      = string
+    datastore_id   = optional(string, "local")
+    network_bridge = optional(string, "vmbr0")
+  }))
 
   validation {
-    condition     = can(regex("^https?://", var.proxmox_endpoint))
-    error_message = "proxmox_endpoint должен быть валидным URL, начинающимся с http:// или https://"
+    condition     = length(var.proxmox_nodes) > 0
+    error_message = "proxmox_nodes должен содержать хотя бы один узел"
   }
-}
 
-variable "proxmox_api_token" {
-  description = "API token для Terraform"
-  type        = string
-  sensitive   = true
+  validation {
+    condition = alltrue([
+      for name, cfg in var.proxmox_nodes : can(regex("^https?://", cfg.endpoint))
+    ])
+    error_message = "endpoint каждого узла должен быть валидным URL (http:// или https://)"
+  }
+
+  validation {
+    condition = alltrue([
+      for name, cfg in var.proxmox_nodes : length(cfg.node_name) > 0
+    ])
+    error_message = "node_name не может быть пустым"
+  }
 }
 
 variable "proxmox_ssh_key_path" {
@@ -31,39 +45,6 @@ variable "proxmox_use_ssh_agent" {
   default     = false
 }
 
-variable "node_name" {
-  description = "Имя узла Proxmox"
-  type        = string
-  default     = "pve-node-01"
-
-  validation {
-    condition     = length(var.node_name) > 0
-    error_message = "node_name не может быть пустым"
-  }
-}
-
-variable "datastore_id" {
-  description = "Хранилище для VM дисков"
-  type        = string
-  default     = "local"
-
-  validation {
-    condition     = length(var.datastore_id) > 0
-    error_message = "datastore_id не может быть пустым"
-  }
-}
-
-variable "network_bridge" {
-  description = "Сетевой мост"
-  type        = string
-  default     = "vmbr0"
-
-  validation {
-    condition     = can(regex("^vmbr[0-9]+$", var.network_bridge))
-    error_message = "network_bridge должен быть в формате vmbr0, vmbr1, и т.д."
-  }
-}
-
 variable "ssh_public_key" {
   description = "Публичный SSH-ключ для VM"
   type        = string
@@ -75,7 +56,7 @@ variable "ssh_public_key" {
 }
 
 variable "vm_list" {
-  description = "Список VM для создания"
+  description = "Список VM для создания. Для каждой VM укажите proxmox_node — ключ из proxmox_nodes, на каком узле создавать VM."
   type = map(object({
     vm_hostname : string
     vm_ip : string
@@ -85,6 +66,7 @@ variable "vm_list" {
     vm_disk_size : number
     cloud_init_file = string
     role            = string
+    proxmox_node    = string
   }))
 
   validation {
@@ -139,6 +121,13 @@ variable "vm_list" {
       for k, v in var.vm_list : length(v.cloud_init_file) > 0
     ])
     error_message = "cloud_init_file не может быть пустым"
+  }
+
+  validation {
+    condition = alltrue([
+      for k, v in var.vm_list : contains(keys(var.proxmox_nodes), v.proxmox_node)
+    ])
+    error_message = "proxmox_node каждой VM должен быть ключом из proxmox_nodes"
   }
 }
 

@@ -77,10 +77,9 @@ Terraform конфигурация автоматизирует:
    ```
 
 2. **Отредактируйте `terraform.tfvars`** и заполните реальные значения:
-   - `proxmox_endpoint` - URL вашего Proxmox API
-   - `proxmox_api_token` - API токен для Terraform
-   - `ssh_public_key` - ваш публичный SSH ключ
-   - `vm_list` - список виртуальных машин для создания
+   - `proxmox_nodes` — узлы Proxmox (endpoint, api_token, node_name для каждого; в кластере один токен для всех узлов)
+   - `ssh_public_key` — ваш публичный SSH ключ
+   - `vm_list` — список VM; у каждой укажите `proxmox_node` — ключ из `proxmox_nodes`, на каком узле создавать VM
 
 3. **Создайте API токен в Proxmox:**
    ```bash
@@ -128,15 +127,11 @@ Terraform автоматически:
 
 | Переменная | Описание | Обязательная | По умолчанию |
 |------------|----------|--------------|--------------|
-| `proxmox_endpoint` | URL API Proxmox (например `https://192.168.7.151:8006/`) | Да | - |
-| `proxmox_api_token` | API токен для Terraform | Да | - |
-| `node_name` | Имя узла Proxmox | Нет | `pve-node-01` |
-| `datastore_id` | Хранилище для дисков VM | Нет | `local` |
-| `network_bridge` | Сетевой мост | Нет | `vmbr0` |
+| `proxmox_nodes` | Map узлов Proxmox: ключ — id ноды (например `pve-node-01`), значение — endpoint, api_token, node_name, опционально datastore_id, network_bridge | Да | - |
 | `gateway_ip` | IP шлюза для VM | Да | - |
 | `network_cidr` | Маска подсети (например 24) | Нет | `24` |
 | `ssh_public_key` | Публичный SSH ключ для VM | Да | - |
-| `vm_list` | Список VM (vm_hostname, vm_ip, vm_id, vm_cores, vm_memory, vm_disk_size, cloud_init_file, role) | Да | - |
+| `vm_list` | Список VM: vm_hostname, vm_ip, vm_id, vm_cores, vm_memory, vm_disk_size, cloud_init_file, role, **proxmox_node** (ключ из proxmox_nodes) | Да | - |
 | `vm_user` | Имя пользователя на VM | Нет | `ubuntu` |
 | `ansible_control_vm_key` | Ключ в vm_list для Ansible control VM | Нет | `ansible_control-01` |
 | `ansible_ssh_key_path` | Путь к SSH ключу для Ansible control VM | Нет | `keys/id_ed25519` |
@@ -149,17 +144,32 @@ Terraform автоматически:
 Для безопасности можно использовать переменные окружения вместо `terraform.tfvars`:
 
 ```bash
-export TF_VAR_proxmox_api_token="terraform@pve!terraform-token=YOUR_TOKEN"
 export TF_VAR_ssh_public_key="$(cat ~/.ssh/id_ed25519.pub)"
+# Токен для Proxmox задаётся внутри proxmox_nodes в tfvars или через TF_VAR (сложнее для map)
 terraform apply
 ```
 
 ### Пример конфигурации
 
 ```hcl
-# terraform.tfvars
-proxmox_endpoint = "https://192.168.7.151:8006/"
-proxmox_api_token = "terraform@pve!terraform-token=YOUR_TOKEN"
+# terraform.tfvars (поддержка нескольких узлов Proxmox)
+proxmox_nodes = {
+  "pve-node-01" = {
+    endpoint       = "https://192.168.7.151:8006/"
+    api_token      = "terraform@pve!terraform-token=YOUR_TOKEN"
+    node_name      = "pve-node-01"
+    datastore_id   = "local"
+    network_bridge = "vmbr0"
+  }
+  "pve-node-02" = {
+    endpoint       = "https://192.168.7.152:8006/"
+    api_token      = "terraform@pve!terraform-token=YOUR_TOKEN"
+    node_name      = "pve-node-02"
+    datastore_id   = "local"
+    network_bridge = "vmbr0"
+  }
+}
+
 gateway_ip = "192.168.7.1"
 ssh_public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... user@host"
 
@@ -173,6 +183,7 @@ vm_list = {
     vm_disk_size    = 20
     cloud_init_file = "ansible-control.yaml.tftpl"
     role            = "ansible"
+    proxmox_node    = "pve-node-01"
   }
   k8s_control-01 = {
     vm_hostname     = "k8s-control-01"
@@ -183,6 +194,7 @@ vm_list = {
     vm_disk_size    = 30
     cloud_init_file = "k8s-control.yaml.tftpl"
     role            = "k8s_control"
+    proxmox_node    = "pve-node-01"
   }
   k8s_worker-01 = {
     vm_hostname     = "k8s-worker-01"
@@ -193,6 +205,18 @@ vm_list = {
     vm_disk_size    = 30
     cloud_init_file = "k8s-worker.yaml.tftpl"
     role            = "k8s_worker"
+    proxmox_node    = "pve-node-01"
+  }
+  k8s_worker-02 = {
+    vm_hostname     = "k8s-worker-02"
+    vm_ip           = "192.168.7.164"
+    vm_id           = 1004
+    vm_cores        = 4
+    vm_memory       = 8000
+    vm_disk_size    = 30
+    cloud_init_file = "k8s-worker.yaml.tftpl"
+    role            = "k8s_worker"
+    proxmox_node    = "pve-node-02"
   }
 }
 ```
@@ -208,7 +232,7 @@ vm_list = {
 
 1. **Генерирует Ansible inventory** (`02-ansible/inventory/prod/hosts.yaml`):
    - Группы: `kube_control_plane`, `kube_node`, `k8s_cluster`, `proxmox`
-   - IP VM берутся из `vm_list`; IP хоста Proxmox извлекается из `proxmox_endpoint` (не из gateway)
+   - IP VM берутся из `vm_list`; в группу `proxmox` попадают все узлы из `proxmox_nodes` (IP из endpoint каждого узла)
 
 2. **Копирует файлы на Ansible control VM** через скрипт `push_ansible_files.sh`:
    - Inventory, playbooks, roles, Helm values, SSH ключи, group variables
@@ -218,7 +242,7 @@ vm_list = {
 
 ### Proxmox в inventory
 
-Группа `proxmox` в inventory используется playbook'ом node-exporter. Хост Proxmox подключается по SSH под пользователем **root**. IP берётся из URL `proxmox_endpoint` (например, из `https://192.168.7.151:8006/` получится `192.168.7.151`). Убедитесь, что на Proxmox настроен вход root по вашему SSH ключу (например, `ssh-copy-id root@<proxmox_ip>`).
+Группа `proxmox` в inventory используется playbook'ом node-exporter. В неё попадают все узлы из `proxmox_nodes` (pve-node-01, pve-node-02 и т.д.); IP каждого хоста извлекается из URL `endpoint`. Подключение по SSH под пользователем **root**. Убедитесь, что на каждом узле Proxmox настроен вход root по вашему SSH ключу (например, `ssh-copy-id root@<proxmox_ip>`).
 
 ### Получение kubeconfig
 
@@ -250,11 +274,11 @@ export KUBECONFIG=~/.kube/config-lab-home
 
 ---
 
-Модуль `modules/base-vm-cloudinit` создает виртуальные машины в Proxmox с использованием cloud-init для начальной настройки.
+Модуль `modules/base-vm-cloudinit` создаёт виртуальные машины в Proxmox с использованием cloud-init. В `live/main.tf` модуль вызывается **по одному разу на каждый узел** из `proxmox_nodes`; каждому вызову передаётся свой провайдер (alias), параметры узла (endpoint, api_token, node_name, datastore_id, network_bridge) и отфильтрованный `vm_list` (только VM с соответствующим `proxmox_node`).
 
 ### Входные переменные модуля
 
-Модуль получает от `live/main.tf`: `proxmox_endpoint`, `proxmox_api_token`, `node_name`, `datastore_id`, `network_bridge`, `ssh_authorized_keys`, `vm_user`, `vm_list`, `gateway_ip`, `network_cidr`, `iso_image`, `snippets_datastore_id`, `disk_datastore_id`, `ansible_version`.
+Модуль получает от `live/main.tf`: `proxmox_endpoint`, `proxmox_api_token`, `node_name`, `datastore_id`, `network_bridge`, `ssh_authorized_keys`, `vm_user`, `vm_list` (без полей role и proxmox_node), `gateway_ip`, `network_cidr`, `iso_image`, `snippets_datastore_id`, `disk_datastore_id`, `ansible_version`.
 
 Полный список см. в `modules/base-vm-cloudinit/variables.tf`.
 
@@ -522,7 +546,7 @@ ping <vm_ip>
 
 **Симптом:** Ansible не подключается к `pve-node-01` (например, `root@192.168.x.x: Permission denied`).
 
-**Причины:** В inventory для группы `proxmox` должен быть IP хоста Proxmox (извлекается из `proxmox_endpoint`). Раньше ошибочно подставлялся `gateway_ip` — это исправлено: после `terraform apply` в inventory попадает хост из URL (например, из `https://192.168.7.151:8006/` → `192.168.7.151`). Дополнительно для playbook node-exporter нужен вход по SSH под **root** на Proxmox.
+**Причины:** В inventory для группы `proxmox` должны быть IP хостов Proxmox (извлекаются из `proxmox_nodes` по полю endpoint каждого узла). Для playbook node-exporter нужен вход по SSH под **root** на каждый узел Proxmox.
 
 **Решение:**
 ```bash

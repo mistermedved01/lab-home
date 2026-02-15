@@ -1,104 +1,102 @@
 # Пример конфигурации для Terraform
 # Скопируйте этот файл в terraform.tfvars и заполните реальными значениями
 # terraform.tfvars уже добавлен в .gitignore и не будет коммититься в репозиторий
+#
+# Поддерживается несколько узлов Proxmox: укажите proxmox_nodes и для каждой VM — proxmox_node.
 
-# URL API Proxmox
-proxmox_endpoint = "https://192.168.40.143:8006/"
-
-# API token для Terraform (можно использовать переменную окружения TF_VAR_proxmox_api_token)
-# Или создать через: pveum user token add terraform@pve terraform-token --privsep 0
-proxmox_api_token = "terraform@pve!terraform-token=YOUR_TOKEN_HERE"
-
-# Имя узла Proxmox
-node_name = "pve-node-01"
-
-# Хранилище для VM дисков
-datastore_id = "local"
-
-# Сетевой мост
-network_bridge = "vmbr0"
+# Узлы Proxmox: ключ — идентификатор ноды, значение — endpoint, api_token, node_name
+# В кластере Proxmox один API token действует для всех узлов — укажите один и тот же для обоих
+# Сейчас в конфиге заложены два узла (pve-node-01 и pve-node-02); оба ключа обязательны.
+# Если у вас один узел — укажите его данные в обоих блоках (одинаковый endpoint и node_name).
+proxmox_nodes = {
+  "pve-node-01" = {
+    endpoint       = "https://192.168.40.151:8006/"
+    api_token      = "terraform@pve!terraform-token=YOUR_TOKEN_HERE"
+    node_name      = "pve-node-01"
+    datastore_id   = "local"
+    network_bridge = "vmbr0"
+  }
+  "pve-node-02" = {
+    endpoint       = "https://192.168.40.152:8006/"
+    api_token      = "terraform@pve!terraform-token=YOUR_TOKEN_HERE"
+    node_name      = "pve-node-02"
+    datastore_id   = "local"
+    network_bridge = "vmbr0"
+  }
+}
 
 # IP-адрес шлюза для VM
-gateway_ip = "192.168.40.143"
+gateway_ip = "192.168.40.1"
 
-# ISO образ для создания VM (например, local:iso/noble-server-cloudimg-amd64.img)
+# ISO образ для создания VM (путь в datastore Proxmox)
 iso_image = "local:iso/noble-server-cloudimg-amd64.img"
 
-# Хранилище для cloud-init snippets
-snippets_datastore_id = "local"
-
 # SSH публичный ключ, который попадёт во все ВМ
-# Получить можно через: cat ~/.ssh/id_ed25519.pub
+# Получить: cat ~/.ssh/id_ed25519.pub
 ssh_public_key = "ssh-ed25519 YOUR_PUBLIC_KEY_HERE user@host"
 
 # Список VM для создания
+# Для каждой VM укажите proxmox_node — ключ из proxmox_nodes (на каком узле создавать VM)
 vm_list = {
-  ansible_control-01 = {                   # уникальный ключ для Terraform 
-    vm_hostname     = "ansible-control-01" # имя ВМ
-    vm_ip           = "192.168.40.144"
-    vm_id           = 1000
+  ansible_control-01 = {
+    vm_hostname     = "ansible-control-01"
+    vm_ip           = "192.168.40.161"
+    vm_id           = 1001
     vm_cores        = 2
-    vm_memory       = 4000                  # в МБ
-    vm_disk_size    = 80                   # в ГБ
+    vm_memory       = 2000
+    vm_disk_size    = 20
     cloud_init_file = "ansible-control.yaml.tftpl"
-    role            = "ansible"             # роль для Ansible inventory
+    role            = "ansible"
+    proxmox_node    = "pve-node-01"
   }
 
   k8s_control-01 = {
     vm_hostname     = "k8s-control-01"
-    vm_ip           = "192.168.40.145"
-    vm_id           = 1001
+    vm_ip           = "192.168.40.162"
+    vm_id           = 1002
     vm_cores        = 4
-    vm_memory       = 8000
-    vm_disk_size    = 80
+    vm_memory       = 4000
+    vm_disk_size    = 30
     cloud_init_file = "k8s-control.yaml.tftpl"
     role            = "k8s_control"
+    proxmox_node    = "pve-node-01"
   }
 
   k8s_worker-01 = {
     vm_hostname     = "k8s-worker-01"
-    vm_ip           = "192.168.40.146"
-    vm_id           = 1002
+    vm_ip           = "192.168.40.163"
+    vm_id           = 1003
     vm_cores        = 4
     vm_memory       = 8000
-    vm_disk_size    = 80
+    vm_disk_size    = 30
     cloud_init_file = "k8s-worker.yaml.tftpl"
     role            = "k8s_worker"
+    proxmox_node    = "pve-node-01"
   }
 
-  # Пример закомментированной VM
   # k8s_worker-02 = {
   #   vm_hostname     = "k8s-worker-02"
-  #   vm_ip           = "192.168.40.147"
-  #   vm_id           = 1003
-  #   vm_cores        = 2
-  #   vm_memory       = 2048
-  #   vm_disk_size    = 20
+  #   vm_ip           = "192.168.40.164"
+  #   vm_id           = 1004
+  #   vm_cores        = 4
+  #   vm_memory       = 8000
+  #   vm_disk_size    = 30
   #   cloud_init_file = "k8s-worker.yaml.tftpl"
   #   role            = "k8s_worker"
+  #   proxmox_node    = "pve-node-02"
   # }
 }
 
 # Опциональные переменные (имеют значения по умолчанию)
 # ansible_control_vm_key = "ansible_control-01"
 # vm_user = "ubuntu"
-# ansible_ssh_user = null  # если null, будет использован vm_user
+# ansible_ssh_user = null
 # ansible_ssh_key_path = "keys/id_ed25519"
 # ansible_version = "13.3.0-1ppa~noble"
 # network_cidr = 24
+# snippets_datastore_id = "local"
 
 # SSH ключ для подключения к Proxmox (для операций провайдера)
-# Варианты:
-# 1. Использовать ключ из директории keys/ (рекомендуется для проекта)
 # proxmox_ssh_key_path = "keys/id_ed25519"
-#
-# 2. Использовать стандартный ключ из ~/.ssh/
-# proxmox_ssh_key_path = null  # или не указывать (используется по умолчанию)
-#
-# 3. Использовать абсолютный путь
-# proxmox_ssh_key_path = "/path/to/your/key"
-#
-# 4. Использовать SSH agent (рекомендуется для CI/CD)
-# proxmox_use_ssh_agent = true
-# proxmox_ssh_key_path = null  # не нужен при использовании agent
-
+# proxmox_ssh_key_path = null   # по умолчанию ~/.ssh/id_ed25519
+# proxmox_use_ssh_agent = true  # для CI/CD
