@@ -1,0 +1,142 @@
+# Имя ресурсов в кластере (StatefulSet, Pod, Service и т.д.) 
+# Можно переопределить, например: vault-lab-home
+fullnameOverride: vault
+global:
+  enabled: true
+  serverTelemetry:
+    prometheusOperator: true
+  tlsDisable: false
+injector:
+  image:
+    repository: "hashicorp/vault-k8s"
+    tag: "1.2.1"
+  agentImage:
+    repository: "hashicorp/vault"
+    tag: 1.14.0
+  certs:
+    # CA bundle из preconfigure/keys/lab-home/caBundle.b64
+    caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUZYekNDQTBlZ0F3SUJBZ0lVU3MyZG11WVBFa0xNM2UzbWdvNTg2MGZ6Yi9Nd0RRWUpLb1pJaHZjTkFRRUwKQlFBd1B6RVJNQThHQTFVRUNnd0liR0ZpTFdodmJXVXhEakFNQmdOVkJBc01CWFpoZFd4ME1Sb3dHQVlEVlFRRApEQkZzWVdJdGFHOXRaU0JXWVhWc2RDQkRRVEFlRncweU5qQXlNall3T0RRNU5UaGFGdzB6TmpBeU1qUXdPRFE1Ck5UaGFNRDh4RVRBUEJnTlZCQW9NQ0d4aFlpMW9iMjFsTVE0d0RBWURWUVFMREFWMllYVnNkREVhTUJnR0ExVUUKQXd3UmJHRmlMV2h2YldVZ1ZtRjFiSFFnUTBFd2dnSWlNQTBHQ1NxR1NJYjNEUUVCQVFVQUE0SUNEd0F3Z2dJSwpBb0lDQVFESVI2UjdBelhxZUhKUHZDWW5BL0pXOUpMV2NKRjRWT1Y3M2xtRDNQWTFxNFpoc1ozWXBOaE52ZWduCi9sbVJpcTJ2cDFzclc1VGlCQUxlakdWK2NHL0R0b214UzB6ZkJ5Q0pLVkF5SFkvc1M1eXJsRTN0d04xd01NM0MKUEpwUUJ5bk9NVS84T3dQbmpkMWhLdnlOamE2by9HRFVuNzlPRU1LZ1hOWmZObjI3dG5JZ1M1QitGQ3dEVmlsWAo1WWhzNW9ickdHcDJCNXZsVDlNZkpNL1JJa2c3cWtHOG12cGlTbkZ1cGplWmVURVNvNXhHalJqY2xON25EelRVCjBiK29XSENzU2FTWFBEMlV3SkFlenhqZmpBK2hVQ2FsMUhIZGYyc0toTDdXZUd4T09XRGhnT3F2R0N1M04xeCsKK1UzZzdhV2lreUxWdmNKQWlsRm1taTZhZnpBb1hSb0FTQnNwSXhRUlp3RCtTdmJsYzBrTC9GV3BRL0s0Nko5cQpuakhLVHVqZExHL2lZZFBJWUpoazUrc2h2SlV1N2l5dnczWVZ4Y21yT2JoVnBBcXkzaHF1MFdxQWxScXJwMHVhCmE4eGEvRGFxdFBtTFFMTDExR0xnTlJDaVV2NVRiYVlXTGFsSHBQdzRMNFhWY1FzVEN2Z3NIVWdaWWFtcmVKbzEKZGxiaUhCUUppMEFrV09KMFN1Sm1XNGx4aXJBTkF5VWpXb3dib2t0UU44cXRWS1FGVjAvNmtUM3hlTWphSzJabgp3TmhkdE42S25vMC9WemtQYTgrRVNNL25uc3FqSzY4WVRibk5uSi9SSitneTRkRkQ3d2EwRDgyNGdPYnQ2ZUhkCkp0VmJMMUd2UHl2VitMUmlPY2F6dFFpaDZWSWVFTWlldk1PT01VZFA0TmJkMGNoN0RRSURBUUFCbzFNd1VUQWQKQmdOVkhRNEVGZ1FVMXhmc2pCTDBKSXNlOWtoNW42Z3JiRS9sL0RFd0h3WURWUjBqQkJnd0ZvQVUxeGZzakJMMApKSXNlOWtoNW42Z3JiRS9sL0RFd0R3WURWUjBUQVFIL0JBVXdBd0VCL3pBTkJna3Foa2lHOXcwQkFRc0ZBQU9DCkFnRUFwamZsWk8rUER0SzdtYmhDWEFJYVZtYklRcmcwYnlxRkxuTHJTNnllZ1p4cmJNK0JsNENrdmNTazk0ZE8KMGZtN2Fncno4dU51NHZwQ0ZWWmhjNXlVMUptL29vQVl6a2tOYk5NS2QrbE9WTnlvem5xZjE0VVJjelV1M1VWZQpvQ05GTTU3STVET0V5WXFJc01zemdpczU0Uk8yckd2c29YQ2ZkVm9LdWJxYmFFT09PUks0by91UllkWHlKd1E4CkM3VCtyRjdqdnJOdm9OUm0yNGdiZHJIY3V2TUU0VHFGMTk5Zkdsd0VJaWdLVkxFa3NrOThQSUtiK0NVeTFIQnoKUmovZGd0QkErVFFoeEhVbHFJVE1EM3doQi9ERXJJajh5bDh2L1pKWXNVZGF0ZEFpZHYrUlBYVW9NOCtYcUdoRQo2ZXEyMWYrNWZvVDFRaVUwTzdxRFpsYWJBbzJYQmdXazgwRXFDMktzaHV0bEdKMnAvMjNOS2l2TTNSWlRjcnU4CncrdTErNDZFeVNBQjcvSjlKWDR3ajJ4ak9tblhQR1FLUDJjRFFTdkhEQ2tta3BqaUpnai9YT2pQelVkQWdxNXIKYnNXT2pRV2hnNHFiOFdMRjN4RElkU3VCK25IUGZnMnhaN2hTRFdpM1Naayt3UjZIUW9DWjlDWklKeDFRY2I1YgpwWWxEQTRxVnh4cS9rZEdXc054V21JQlF3T0o3aGJxVksxVDdkNTMwSHhFRjlvS043d1BOczF1TkFZeFZmeDAwCkplUWowZXRqZVlmUEZOLzZrMjRUOVVINmJVTW14NlQrR3U5UzVzSEhpU05wU0ZkOTdFUVYvRU4zNTlOL1NPMVAKVkVqek1FbXprcUs4bDAvbXkycnA4OXJIbHpRcUF6dEppcDJTVmwvbTduZHRZbDA9Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+    secretName: vault-injector-crt
+  enabled: true
+  resources:
+    limits:
+      cpu: 260m
+      memory: 256Mi
+    requests:
+      cpu: 260m
+      memory: 256Mi
+server:
+  auditStorage:
+    enabled: true
+    mountPath: /vault/audit
+    size: 10Gi
+    storageClass: null
+  dataStorage:
+    enabled: true
+    mountPath: /vault/data
+    size: 10Gi
+    storageClass: null
+  enabled: true
+  extraEnvironmentVars:
+    VAULT_CACERT: /vault/userconfig/vault-ca/ca.crt
+  extraVolumes:
+    - name: vault-ca
+      type: configMap
+    - name: vault-crt
+      type: secret
+  ha:
+    apiAddr: "https://$(VAULT_K8S_POD_NAME).vault-internal:8200"
+    enabled: true
+    raft:
+      config: >
+        ui = true
+        disable_mlock = true
+        listener "tcp" {
+          tls_disable = false
+          address = "[::]:8200"
+          cluster_address = "[::]:8201"
+          tls_cert_file = "/vault/userconfig/vault-crt/tls.crt"
+          tls_key_file = "/vault/userconfig/vault-crt/tls.key"
+          tls_client_ca_file = "/vault/userconfig/vault-ca/ca.crt"
+          # Enable unauthenticated metrics access (necessary for Prometheus Operator)
+          telemetry {
+            unauthenticated_metrics_access = "true"
+          }
+        }
+        telemetry {
+          prometheus_retention_time = "30s"
+          disable_hostname = true
+        }
+        storage "raft" {
+          path = "/vault/data"
+          retry_join {
+            leader_api_addr = "https://vault-0.vault-internal:8200"
+            leader_ca_cert_file = "/vault/userconfig/vault-ca/ca.crt"
+            leader_client_cert_file = "/vault/userconfig/vault-crt/tls.crt"
+            leader_client_key_file = "/vault/userconfig/vault-crt/tls.key"
+          }
+        }
+        service_registration "kubernetes" {}
+      enabled: true
+      setNodeId: true
+    replicas: 1
+  image:
+    repository: "hashicorp/vault"
+    tag: 1.14.0
+  ingress:
+    activeService: true
+    annotations:
+      cert-manager.io/cluster-issuer: "selfsigned-issuer"
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    enabled: true
+    ingressClassName: nginx
+    hosts:
+      - host: vault.lab-home.com
+        paths: []
+    # TLS для Ingress (внешний HTTPS vault-main.lab-home.com) 
+    # Создаётся cert-manager по аннотации cluster-issuer.
+    tls:
+      - secretName: vault-ingress-tls
+        hosts:
+          - vault.lab-home.com
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 60
+    path: /v1/sys/health?standbyok=true
+    port: 8200
+    timeoutSeconds: 10
+    periodSeconds: 10
+    failureThreshold: 3
+  readinessProbe:
+    enabled: true
+    path: /v1/sys/health?standbyok=true&sealedcode=204&uninitcode=204
+    port: 8200
+    timeoutSeconds: 10
+    periodSeconds: 5
+    initialDelaySeconds: 10
+    failureThreshold: 5
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+  updateStrategyType: OnDelete
+serverTelemetry:
+  prometheusRules:
+    enabled: true
+    rules: []
+  serviceMonitor:
+    enabled: true
+ui:
+  enabled: true
+  externalPort: 8200
+  serviceNodePort: null
+  serviceType: ClusterIP
+
+csi:
+  image:
+    repository: "hashicorp/vault-csi-provider"
+    tag: "1.4.0"
