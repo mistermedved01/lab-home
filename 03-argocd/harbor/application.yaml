@@ -13,11 +13,12 @@ spec:
 
   source:
     repoURL: https://github.com/mistermedved01/lab-home.git
-    path: 03-argocd/harbor/helm
+    path: 03-argocd/harbor/helm/charts/harbor-1.18.0
     targetRevision: main
     helm:
+      releaseName: harbor
       valueFiles:
-        - env/lab-home.yaml
+        - ../../custom-values/lab-home.yaml
 
   destination:
     server: https://kubernetes.default.svc
