@@ -95,7 +95,7 @@ graph TB
 
 - **Файл Application**: `03-argocd/harbor/application.yaml`
 - **Namespace**: `harbor`
-- **Тип источника**: Git (чарт из [goharbor/harbor-helm](https://github.com/goharbor/harbor-helm)), версия по тегу `v1.18.2`
+- **Тип источника**: Git (распакованный чарт Harbor 1.18.0 в `helm/charts/harbor-1.18.0`, values в `helm/custom-values/lab-home.yaml`)
 - **URL**: `https://harbor.lab-home.com`
 
 </details>
@@ -107,13 +107,15 @@ graph TB
 
 ```
 harbor/
-├── application.yaml         # Application
-├── helm/                    # Локальный chart, переопределение через env
-│   ├── Chart.yaml
-│   ├── values.yaml
-│   ├── env/
-│   │   └── lab-home.yaml
-│   └── charts/              # harbor-*.tgz (helm dependency update)
+├── application.yaml              # Application
+├── helm/
+│   ├── charts/
+│   │   └── harbor-1.18.0/        # Распакованный чарт Harbor 1.18.0
+│   │       ├── Chart.yaml
+│   │       ├── values.yaml
+│   │       └── templates/
+│   └── custom-values/
+│       └── lab-home.yaml          # переопределение для lab-home (valueFiles: ../../custom-values/lab-home.yaml)
 └── README.md
 ```
 
@@ -321,14 +323,14 @@ kubectl get all -n harbor
 
 1. **Сменить после первого входа** в веб-интерфейсе: *Administration → Users → admin → Change Password*.
 
-2. **Задать до развертывания** в `helm/env/lab-home.yaml` (не коммитьте реальные пароли в Git):
+2. **Задать до развертывания** в `helm/custom-values/lab-home.yaml` (не коммитьте реальные пароли в Git):
    ```yaml
    harborAdminPassword: "ВашПароль"
    ```
 
 3. **Использовать существующий Secret** с ключом `HARBOR_ADMIN_PASSWORD`:
    - Создайте Secret в namespace `harbor`.
-   - В `helm.values` добавьте:
+   - В `helm/custom-values/lab-home.yaml` добавьте (на верхнем уровне):
      ```yaml
      existingSecretAdminPassword: "my-harbor-admin-secret"
      ```
@@ -336,7 +338,7 @@ kubectl get all -n harbor
 
 ### Хранилище и StorageClass
 
-По умолчанию используется default StorageClass кластера. Чтобы задать свой (например, `local-path`), в блоке `persistence.persistentVolumeClaim` в `helm/env/lab-home.yaml`:
+По умолчанию используется default StorageClass кластера. Чтобы задать свой (например, `local-path`), в блоке `persistence.persistentVolumeClaim` в `helm/custom-values/lab-home.yaml`:
 
 ```yaml
 persistence:
@@ -363,7 +365,7 @@ persistence:
 
 ### Изменение домена (externalURL)
 
-В `helm/env/lab-home.yaml` измените:
+В `helm/custom-values/lab-home.yaml` измените:
 
 ```yaml
 externalURL: https://ваш-домен.lab-home.com
@@ -377,21 +379,22 @@ expose:
 
 ### Источник чарта (Git vs Helm repo)
 
-Текущая конфигурация использует **Git** (репозиторий [goharbor/harbor-helm](https://github.com/goharbor/harbor-helm), `path: .`, `targetRevision: v1.18.2`), чтобы избежать таймаутов при обращении к `helm.goharbor.io` из кластера.
+Текущая конфигурация использует **распакованный чарт** из Git: `path: 03-argocd/harbor/helm/charts/harbor-1.18.0`, values в `helm/custom-values/lab-home.yaml` (в Application задано `valueFiles: ../../custom-values/lab-home.yaml`). Чарт взят с [helm.goharbor.io](https://helm.goharbor.io) (harbor 1.18.0), распакован локально, чтобы не зависеть от доступа к Helm repo из кластера.
 
-Чтобы переключиться на **Helm repo**, в `helm/Chart.yaml` измените dependency `repository`:
+Чтобы переключиться на **Helm repo**, в `application.yaml` укажите:
 
 ```yaml
 source:
   repoURL: https://helm.goharbor.io
   chart: harbor
-  targetRevision: "1.18.2"
-  # удалите поле path
+  targetRevision: "1.18.0"
+  path: ""   # не использовать
+# и задайте helm.valueFiles на нужные values (если храните в репо)
 ```
 
 ### Обновление версии чарта
 
-При использовании Git измените `targetRevision` на нужный тег (например, `v1.19.0`). При использовании Helm repo измените `targetRevision` на версию чарта. ArgoCD синхронизирует изменения.
+При использовании распакованного чарта: скачайте новую версию (`helm pull harbor --repo https://helm.goharbor.io --version <версия> --untar`), распакуйте в `helm/charts/harbor-<версия>`, обновите `path` в `application.yaml` на `03-argocd/harbor/helm/charts/harbor-<версия>`. Файл `helm/custom-values/lab-home.yaml` менять не нужно.
 
 </details>
 
@@ -483,7 +486,7 @@ kubectl get certificate -n harbor
 
 **Для production (Let's Encrypt)**
 
-В `helm/env/lab-home.yaml` в аннотациях Ingress замените:
+В `helm/custom-values/lab-home.yaml` в аннотациях Ingress замените:
 
 ```yaml
 cert-manager.io/cluster-issuer: "letsencrypt-prod"
