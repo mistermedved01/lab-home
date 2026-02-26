@@ -1,0 +1,45 @@
+# Harbor values для окружения lab-home (чарт helm/charts/harbor-1.18.0)
+externalURL: https://harbor.lab-home.com
+harborAdminPassword: "ChangeMeAfterInstall"
+
+expose:
+  type: ingress
+  tls:
+    enabled: true
+    certSource: secret
+    secret:
+      secretName: harbor-tls
+  ingress:
+    hosts:
+      core: harbor.lab-home.com
+    className: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: "selfsigned-issuer"
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/proxy-body-size: "0"
+      nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+
+persistence:
+  enabled: true
+  persistentVolumeClaim:
+    registry:
+      storageClass: ""
+      size: 5Gi
+    jobservice:
+      jobLog:
+        storageClass: ""
+        size: 1Gi
+    database:
+      storageClass: ""
+      size: 1Gi
+    redis:
+      storageClass: ""
+      size: 1Gi
+    trivy:
+      storageClass: ""
+      size: 5Gi
+
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: true
