@@ -19,6 +19,7 @@ locals {
   }
   vm_list_pve01 = { for k, v in local.vm_list_for_module : k => v if var.vm_list[k].proxmox_node == "pve-node-01" }
   vm_list_pve02 = { for k, v in local.vm_list_for_module : k => v if var.vm_list[k].proxmox_node == "pve-node-02" }
+  vm_list_pve03 = { for k, v in local.vm_list_for_module : k => v if var.vm_list[k].proxmox_node == "pve-node-03" }
 }
 
 module "vm_cloudinit_pve_node_01" {
@@ -69,6 +70,30 @@ module "vm_cloudinit_pve_node_02" {
   disk_datastore_id     = var.proxmox_nodes["pve-node-02"].datastore_id
 }
 
+module "vm_cloudinit_pve_node_03" {
+  source   = "../modules/base-vm-cloudinit"
+  providers = {
+    proxmox = proxmox.pve_node_03
+  }
+
+  proxmox_endpoint    = var.proxmox_nodes["pve-node-03"].endpoint
+  proxmox_api_token   = var.proxmox_nodes["pve-node-03"].api_token
+  node_name           = var.proxmox_nodes["pve-node-03"].node_name
+  datastore_id        = var.proxmox_nodes["pve-node-03"].datastore_id
+  network_bridge      = var.proxmox_nodes["pve-node-03"].network_bridge
+
+  ssh_authorized_keys = [var.ssh_public_key]
+  vm_user             = var.vm_user
+  ansible_version     = var.ansible_version
+  vm_list             = local.vm_list_pve03
+
+  gateway_ip            = var.gateway_ip
+  network_cidr          = var.network_cidr
+  iso_image             = var.iso_image
+  snippets_datastore_id = var.snippets_datastore_id
+  disk_datastore_id     = var.proxmox_nodes["pve-node-03"].datastore_id
+}
+
 # ============================================================================
 # Генерация Ansible Inventory
 # ============================================================================
@@ -102,7 +127,8 @@ resource "local_file" "ansible_inventory" {
 locals {
   merged_vms_by_hostname = merge(
     module.vm_cloudinit_pve_node_01.vms_by_hostname,
-    module.vm_cloudinit_pve_node_02.vms_by_hostname
+    module.vm_cloudinit_pve_node_02.vms_by_hostname,
+    module.vm_cloudinit_pve_node_03.vms_by_hostname
   )
 
   ansible_control_vm   = var.vm_list[var.ansible_control_vm_key]
@@ -122,7 +148,7 @@ locals {
 # Копирование файлов на Ansible Control VM
 # ============================================================================
 resource "null_resource" "push_ansible_files" {
-  depends_on = [module.vm_cloudinit_pve_node_01, module.vm_cloudinit_pve_node_02, local_file.ansible_inventory]
+  depends_on = [module.vm_cloudinit_pve_node_01, module.vm_cloudinit_pve_node_02, module.vm_cloudinit_pve_node_03, local_file.ansible_inventory]
 
   triggers = {
     inventory_content = local_file.ansible_inventory.content
@@ -152,7 +178,7 @@ resource "null_resource" "push_ansible_files" {
 # Копирование ArgoCD Applications на Control Plane ноду
 # ============================================================================
 resource "null_resource" "push_argocd_applications" {
-  depends_on = [module.vm_cloudinit_pve_node_01, module.vm_cloudinit_pve_node_02]
+  depends_on = [module.vm_cloudinit_pve_node_01, module.vm_cloudinit_pve_node_02, module.vm_cloudinit_pve_node_03]
 
   triggers = {
     vm_ready         = join(",", keys(var.vm_list))
