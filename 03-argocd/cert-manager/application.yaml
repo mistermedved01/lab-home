@@ -1,0 +1,39 @@
+---
+# ArgoCD Application для cert-manager
+# Всё из локальных чартов, переопределение через custom-values
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/mistermedved01/lab-home.git
+    path: 03-argocd/cert-manager/helm/charts/cert-manager-1.16.0
+    targetRevision: main
+    helm:
+      releaseName: cert-manager
+      valueFiles:
+        - ../../custom-values/lab-home.yaml
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cert-manager
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

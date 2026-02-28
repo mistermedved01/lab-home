@@ -11,7 +11,7 @@
 
 1. **Примените ArgoCD Application:**
    ```bash
-   kubectl apply -f 03-argocd/cert-manager/cert-manager.yaml
+   kubectl apply -f 03-argocd/cert-manager/application.yaml
    ```
 
 2. **Дождитесь готовности подов:**
@@ -19,7 +19,7 @@
    kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=cert-manager -n cert-manager --timeout=300s
    ```
 
-3. **Создайте ClusterIssuer:**
+3. **Создайте ClusterIssuer** (вручную после готовности cert-manager):
    ```bash
    kubectl apply -f 03-argocd/cert-manager/clusterissuer-selfsigned.yaml
    ```
@@ -49,11 +49,17 @@
 
 ### Процесс получения сертификата
 
+1. Пользователь создаёт Ingress с аннотацией `cert-manager.io/cluster-issuer`.
+2. cert-manager Controller обнаруживает аннотацию и создаёт ресурс Certificate.
+3. Certificate запрашивает сертификат у ClusterIssuer (self-signed или Let's Encrypt).
+4. ClusterIssuer генерирует сертификат; cert-manager создаёт Secret с сертификатом и ключом.
+5. Secret привязывается к Ingress через `secretName` — TLS трафик защищён.
+
 ```mermaid
 sequenceDiagram
     participant User as Пользователь
-    participant Ingress as Ingress(с аннотацией)
-    participant CM as cert-manager Controller
+    participant Ingress as "Ingress с аннотацией"
+    participant CM as "cert-manager Controller"
     participant CI as ClusterIssuer
     participant Cert as Certificate
     participant Secret as Kubernetes Secret
@@ -77,10 +83,17 @@ sequenceDiagram
 
 ```
 cert-manager/
-├── cert-manager.yaml                   # ArgoCD Application для cert-manager
-├── clusterissuer-selfsigned.yaml       # ClusterIssuer для self-signed сертификатов
-├── clusterissuer-application.yaml      # ArgoCD Application для ClusterIssuer (опционально, требуется git-репозиторий)
-└── README.md                           # Этот файл
+├── application.yaml                    # ArgoCD Application для cert-manager (источник — Git, vendored chart)
+├── clusterissuer-selfsigned.yaml       # ClusterIssuer self-signed (применить вручную после cert-manager)
+├── README.md
+└── helm/
+    ├── custom-values/
+    │   └── lab-home.yaml               # значения для окружения lab-home
+    └── charts/
+        └── cert-manager-1.16.0/        # vendored Helm chart (jetstack)
+            ├── Chart.yaml
+            ├── values.yaml
+            └── templates/...
 ```
 
 </details>
@@ -170,7 +183,7 @@ ClusterIssuer - это кластерный ресурс, который нас�
 
 Self-signed сертификаты не требуют доступа к интернету и подходят для тестовой среды.
 
-#### Вариант 1: Ручное применение (рекомендуется)
+После развёртывания cert-manager примените манифест ClusterIssuer вручную:
 
 ```bash
 # 1. Дождитесь готовности cert-manager
@@ -182,16 +195,6 @@ kubectl apply -f 03-argocd/cert-manager/clusterissuer-selfsigned.yaml
 # 3. Проверьте статус
 kubectl get clusterissuer selfsigned-issuer
 ```
-
-#### Вариант 2: Через ArgoCD Application (требует Git репозиторий)
-
-Если у вас настроен Git репозиторий в ArgoCD:
-
-1. Обновите `repoURL` в `clusterissuer-application.yaml`
-2. Примените Application:
-   ```bash
-   kubectl apply -f 03-argocd/cert-manager/clusterissuer-application.yaml
-   ```
 
 ### Let's Encrypt сертификаты (для production)
 
@@ -501,30 +504,32 @@ kubectl logs -n cert-manager -l app.kubernetes.io/component=webhook
 
 ### Изменение ресурсов
 
-Для изменения ресурсов cert-manager отредактируйте `cert-manager.yaml`:
+Для изменения ресурсов cert-manager отредактируйте `helm/custom-values/lab-home.yaml`:
 
 ```yaml
-helm:
-  values: |
-    resources:
-      requests:
-        cpu: 200m      # Увеличьте при необходимости
-        memory: 256Mi
-      limits:
-        cpu: 1000m
-        memory: 512Mi
+resources:
+  requests:
+    cpu: 200m      # Увеличьте при необходимости
+    memory: 256Mi
+  limits:
+    cpu: 1000m
+    memory: 512Mi
 ```
 
-### Обновление версии
+### Обновление версии чарта
 
-Измените `targetRevision` в `cert-manager.yaml`:
+Чарт vendored в репозитории. Чтобы обновить версию:
 
-```yaml
-source:
-  targetRevision: v1.17.0  # Новая версия
-```
-
-ArgoCD автоматически синхронизирует изменения.
+1. Скачайте новую версию и замените каталог в `helm/charts/`:
+   ```bash
+   cd 03-argocd/cert-manager/helm/charts
+   helm repo add jetstack https://charts.jetstack.io
+   helm pull jetstack/cert-manager --version v1.17.0 --untar
+   rm -rf cert-manager-1.16.0
+   mv cert-manager cert-manager-1.17.0
+   ```
+2. Обновите `path` в `application.yaml`: `03-argocd/cert-manager/helm/charts/cert-manager-1.17.0`.
+3. Закоммитьте изменения; Argo CD синхронизирует новую версию.
 
 </details>
 
