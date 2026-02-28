@@ -1,0 +1,5 @@
+# Force LF for shell scripts and Terraform to avoid CRLF issues in WSL/bash
+*.sh    text eol=lf
+*.tf    text eol=lf
+*.tfvars text eol=lf
+*.tftpl text eol=lf
