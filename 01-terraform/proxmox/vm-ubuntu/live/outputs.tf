@@ -7,7 +7,7 @@
 # ----------------------------------------------------------------------------
 output "vms" {
   description = "Map всех созданных VM с их параметрами"
-  value       = merge(module.vm_cloudinit_pve_node_01.vms, module.vm_cloudinit_pve_node_02.vms)
+  value       = merge(module.vm_cloudinit_pve_node_01.vms, module.vm_cloudinit_pve_node_02.vms, module.vm_cloudinit_pve_node_03.vms)
 }
 
 # ----------------------------------------------------------------------------
@@ -23,7 +23,7 @@ output "vms_by_hostname" {
 # ----------------------------------------------------------------------------
 output "vm_ips" {
   description = "Список всех IP адресов созданных VM"
-  value       = concat(module.vm_cloudinit_pve_node_01.vm_ips, module.vm_cloudinit_pve_node_02.vm_ips)
+  value       = concat(module.vm_cloudinit_pve_node_01.vm_ips, module.vm_cloudinit_pve_node_02.vm_ips, module.vm_cloudinit_pve_node_03.vm_ips)
 }
 
 # ----------------------------------------------------------------------------
@@ -31,7 +31,7 @@ output "vm_ips" {
 # ----------------------------------------------------------------------------
 output "vm_ips_map" {
   description = "Map IP адресов к hostname VM"
-  value       = merge(module.vm_cloudinit_pve_node_01.vm_ips_map, module.vm_cloudinit_pve_node_02.vm_ips_map)
+  value       = merge(module.vm_cloudinit_pve_node_01.vm_ips_map, module.vm_cloudinit_pve_node_02.vm_ips_map, module.vm_cloudinit_pve_node_03.vm_ips_map)
 }
 
 # ----------------------------------------------------------------------------
@@ -49,7 +49,7 @@ output "k8s_control_plane_ips" {
   description = "IP адреса Kubernetes control plane nodes"
   value = [
     for k, vm in var.vm_list : local.merged_vms_by_hostname[vm.vm_hostname].ipv4
-    if vm.role == "k8s_control"
+    if vm.role == "k8s_control" && contains(keys(local.merged_vms_by_hostname), vm.vm_hostname)
   ]
 }
 
@@ -60,6 +60,6 @@ output "k8s_worker_ips" {
   description = "IP адреса Kubernetes worker nodes"
   value = [
     for k, vm in var.vm_list : local.merged_vms_by_hostname[vm.vm_hostname].ipv4
-    if vm.role == "k8s_worker"
+    if vm.role == "k8s_worker" && contains(keys(local.merged_vms_by_hostname), vm.vm_hostname)
   ]
 }
