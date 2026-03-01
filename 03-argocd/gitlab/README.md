@@ -35,7 +35,7 @@
 
 3. **Примените ArgoCD Application для GitLab:**
    ```bash
-   kubectl apply -f 03-argocd/gitlab/application.yaml
+   kubectl apply -f 03-argocd/gitlab/gitlab/application.yaml
    ```
    
    После развертывания cert-manager автоматически создаст Certificate на основе аннотаций Ingress.
@@ -46,7 +46,7 @@
    kubectl delete certificate gitlab-wildcard-tls -n gitlab
    
    # Применить Certificate с правильной настройкой rotationPolicy
-   kubectl apply -f 03-argocd/gitlab/certificate.yaml
+   kubectl apply -f 03-argocd/gitlab/gitlab/certificate.yaml
    ```
 
 5. **Дождитесь готовности подов (10-20 минут):**
@@ -129,7 +129,7 @@ graph TB
 
 ### Основные параметры
 
-- **Файл Application**: `03-argocd/gitlab/application.yaml`
+- **Файл Application**: `03-argocd/gitlab/gitlab/application.yaml`
 - **Namespace**: `gitlab`
 - **Тип источника**: Git (распакованный чарт GitLab 9.7.1 в `helm/charts/gitlab-9.7.1`, values в `helm/custom-values/lab-home.yaml`)
 - **URL**: `https://gitlab.lab-home.com` (или `http://gitlab.lab-home.com:30080` до настройки Ingress)
@@ -141,18 +141,30 @@ graph TB
 
 ---
 
-Структура как в harbor и vault: чарт в Git, values в `helm/custom-values/lab-home.yaml`.
+Структура: чарт в Git, values в `helm/custom-values/`. Прод и тест — отдельные папки.
 
 ```
 03-argocd/gitlab/
-├── application.yaml              # ArgoCD Application (path: helm/charts/gitlab-9.7.1, valueFiles: ../../custom-values/lab-home.yaml)
-├── certificate.yaml              # Certificate для TLS (опционально, при проблемах с ключом)
-├── README.md                     # Документация (этот файл)
+├── gitlab/                        # Прод (namespace gitlab)
+│   ├── application.yaml           # ArgoCD Application
+│   ├── certificate.yaml           # Certificate для TLS (опционально)
+│   ├── gitlab-backup-s3-secret.example.yaml   # Пример Secret (без ключей)
+│   └── gitlab-backup-s3-secret.yaml   # Secret бэкапов (в .gitignore)
+├── gitlab-test/                   # Тест восстановления (namespace gitlab-test)
+│   ├── application.yaml           # ArgoCD Application
+│   ├── certificate.yaml           # Certificate для gitlab-test.lab-home.com
+│   ├── gitlab-backup-s3-secret.example.yaml   # Пример Secret для restore
+│   └── gitlab-backup-s3-secret.yaml   # Secret для restore (в .gitignore)
+├── docs/
+│   ├── BACKUPS.md                 # Подробно: бэкапы и восстановление
+│   └── README-gitlab-test.md      # Развёртывание и тестовый restore
+├── README.md                      # Документация (этот файл)
 └── helm/
     ├── custom-values/
-    │   └── lab-home.yaml         # Values для окружения lab-home
+    │   ├── lab-home.yaml          # Values для прода
+    │   └── lab-home-test.yaml     # Values для gitlab-test
     └── charts/
-        └── gitlab-9.7.1/         # Распакованный чарт GitLab 9.7.1 (из https://charts.gitlab.io)
+        └── gitlab-9.7.1/          # Чарт GitLab 9.7.1
 ```
 
 **Примечание**: Namespace `gitlab` создаётся автоматически через `CreateNamespace=true`.
@@ -256,7 +268,7 @@ kubectl describe clusterissuer selfsigned-issuer
 
 ```bash
 # Применить Application
-kubectl apply -f 03-argocd/gitlab/application.yaml
+kubectl apply -f 03-argocd/gitlab/gitlab/application.yaml
 
 # Проверить статус Application
 kubectl get application gitlab -n argocd
@@ -279,7 +291,7 @@ kubectl delete certificate gitlab-wildcard-tls -n gitlab
 kubectl delete secret gitlab-wildcard-tls gitlab-wildcard-tls-ca gitlab-wildcard-tls-chain -n gitlab
 
 # Применить Certificate с правильной настройкой rotationPolicy
-kubectl apply -f 03-argocd/gitlab/certificate.yaml
+kubectl apply -f 03-argocd/gitlab/gitlab/certificate.yaml
 
 # Проверить статус Certificate
 kubectl get certificate gitlab-wildcard-tls -n gitlab
@@ -680,7 +692,7 @@ kubectl delete namespace gitlab
 kubectl get namespace gitlab
 
 # После удаления namespace примените Application снова
-kubectl apply -f 03-argocd/gitlab/application.yaml
+kubectl apply -f 03-argocd/gitlab/gitlab/application.yaml
 ```
 
 **Важно**: Это действие удалит все данные GitLab (репозитории, пользователи, настройки). Используйте только для новой установки или тестовой среды.
@@ -795,7 +807,7 @@ kubectl delete certificate gitlab-wildcard-tls -n gitlab
 kubectl delete secret gitlab-wildcard-tls gitlab-wildcard-tls-ca gitlab-wildcard-tls-chain -n gitlab
 
 # Применить Certificate с правильными настройками
-kubectl apply -f 03-argocd/gitlab/certificate.yaml
+kubectl apply -f 03-argocd/gitlab/gitlab/certificate.yaml
 
 # Проверить статус
 kubectl get certificate gitlab-wildcard-tls -n gitlab
@@ -836,50 +848,17 @@ kubectl get certificate gitlab-wildcard-tls -n gitlab
 Включён встроенный механизм GitLab (CronJob в toolbox): бэкапы по расписанию в S3-совместимое хранилище (например, MinIO tenant).
 
 **Что уже настроено в `helm/custom-values/lab-home.yaml`:**
-- `global.appConfig.backups.bucket`: `gitlab-backups`
-- `global.appConfig.backups.tmpBucket`: `gitlab-backups-tmp`
+- `global.appConfig.backups.bucket`: `gitlab-toolbox-backup`
+- `global.appConfig.backups.tmpBucket`: `gitlab-toolbox-backup-tmp`
 - `gitlab.toolbox.enabled: true`, `backups.cron.enabled: true`
 - Расписание: ежедневно в 02:00 (`0 2 * * *`)
 - Бэкенд: S3, конфиг из Secret `gitlab-backup-s3-config` (ключ `config`)
 
 **Шаги для активации бэкапов:**
 
-1. **Создать бакеты в MinIO** (например, в MinIO tenant `minio.lab-home.com`):
-   - `gitlab-backups` — для бэкапов
-   - `gitlab-backups-tmp` — временные файлы (можно создать один общий бакет и указать его в обоих полях в values)
+1. **Создать бакеты в MinIO:** `gitlab-toolbox-backup`, `gitlab-toolbox-backup-tmp`.
 
-2. **Создать Secret с конфигом S3** в namespace `gitlab`. Содержимое ключа `config` — файл в формате `.s3cfg` (для MinIO за Ingress):
-
-   ```ini
-   [default]
-   access_key = <ACCESS_KEY>
-   secret_key = <SECRET_KEY>
-   bucket_location = us-east-1
-   host_base = minio.lab-home.com
-   host_bucket = minio.lab-home.com/%(bucket)
-   use_https = True
-   ```
-
-   Если MinIO доступен по HTTP внутри кластера (например, сервис `minio-tenant-minio.minio-operator.svc.cluster.local:9000`), можно использовать:
-   `host_base = minio-tenant-minio.minio-operator.svc.cluster.local`, без `use_https` или `use_https = False`.
-
-   Создание Secret из файла `.s3cfg`:
-   ```bash
-   kubectl create secret generic gitlab-backup-s3-config -n gitlab \
-     --from-file=config=/path/to/.s3cfg
-   ```
-
-   Или из literal (подставьте свои ключи и host):
-   ```bash
-   kubectl create secret generic gitlab-backup-s3-config -n gitlab \
-     --from-literal=config="[default]
-   access_key = minioadmin
-   secret_key = minioadmin123
-   bucket_location = us-east-1
-   host_base = minio.lab-home.com
-   host_bucket = minio.lab-home.com/%(bucket)
-   use_https = True"
-   ```
+2. **Создать Secret с конфигом S3** в namespace `gitlab` (формат .s3cfg, ключ `config`). Рекомендуется использовать внутренний сервис MinIO.
 
 3. После создания Secret и бакетов CronJob `gitlab-toolbox-backup` в namespace `gitlab` будет запускаться по расписанию. Проверка:
    ```bash

@@ -41,8 +41,9 @@ global:
     packages:
       enabled: false
     backups:
-      bucket: gitlab-test-toolbox-backup
-      tmpBucket: gitlab-test-toolbox-backup-tmp
+      # Бакет продового GitLab — чтобы при restore читать бэкапы оттуда
+      bucket: gitlab-toolbox-backup
+      tmpBucket: gitlab-toolbox-backup-tmp
   minio:
     enabled: false
   grafana:

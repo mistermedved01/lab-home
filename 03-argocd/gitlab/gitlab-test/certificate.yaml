@@ -3,11 +3,11 @@
 # Применить после развёртывания приложения gitlab-test.
 #
 # Применение:
-#   kubectl apply -f 03-argocd/gitlab/certificate-gitlab-test.yaml
+#   kubectl apply -f 03-argocd/gitlab/gitlab-test/certificate.yaml
 #
 # Если cert-manager уже создал Certificate с другими параметрами:
 #   kubectl delete certificate gitlab-wildcard-tls -n gitlab-test
-#   kubectl apply -f 03-argocd/gitlab/certificate-gitlab-test.yaml
+#   kubectl apply -f 03-argocd/gitlab/gitlab-test/certificate.yaml
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
