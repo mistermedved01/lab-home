@@ -1,0 +1,49 @@
+# Rancher values для окружения lab-home (чарт helm/charts/rancher-2.13.0)
+
+hostname: rancher.lab-home.com
+replicas: 1
+
+ingress:
+  enabled: true
+  ingressClassName: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: "selfsigned-issuer"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    kubernetes.io/ingress.class: nginx
+  tls:
+    enabled: true
+    source: secret
+    secretName: rancher-tls
+
+# Используем внешний cert-manager (не встроенный в чарт)
+certmanager:
+  enabled: false
+certManager:
+  enabled: false
+
+antiAffinity: preferred
+
+resources:
+  limits:
+    cpu: 2000m
+    memory: 2Gi
+  requests:
+    cpu: 1000m
+    memory: 1Gi
+
+useBundledSystemChart: true
+
+# HTTPS и FQDN
+extraEnv:
+  - name: CATTLE_SERVER_URL
+    value: https://rancher.lab-home.com
+
+global:
+  cattle:
+    ssl:
+      fqdn: rancher.lab-home.com
+
+telemetry:
+  enabled: false

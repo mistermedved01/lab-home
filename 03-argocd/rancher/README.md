@@ -35,7 +35,7 @@
 
 3. **Примените ArgoCD Application для Rancher:**
    ```bash
-   kubectl apply -f 03-argocd/rancher/rancher.yaml
+   kubectl apply -f 03-argocd/rancher/application.yaml
    ```
 
 4. **Дождитесь готовности (5-10 минут):**
@@ -107,11 +107,19 @@ graph TB
 
 ```
 rancher/
-├── rancher.yaml          # ArgoCD Application манифест с inline Helm values
-└── README.md             # Этот файл
+├── application.yaml              # ArgoCD Application (path: helm/charts/rancher-2.13.0, valueFiles: ../../custom-values/lab-home.yaml)
+├── helm/
+│   ├── charts/
+│   │   └── rancher-2.13.0/       # Распакованный чарт Rancher 2.13.0
+│   │       ├── Chart.yaml
+│   │       ├── values.yaml
+│   │       └── templates/
+│   └── custom-values/
+│       └── lab-home.yaml        # Переопределение для lab-home
+└── README.md
 ```
 
-**Примечание**: Namespace `cattle-system` создается автоматически через `CreateNamespace=true` в `rancher.yaml`.
+**Примечание**: Namespace `cattle-system` создается автоматически через `CreateNamespace=true` в `application.yaml`.
 
 </details>
 
@@ -213,7 +221,7 @@ kubectl describe clusterissuer selfsigned-issuer
 
 ```bash
 # Применить Application
-kubectl apply -f 03-argocd/rancher/rancher.yaml
+kubectl apply -f 03-argocd/rancher/application.yaml
 
 # Проверить статус Application
 kubectl get application rancher -n argocd
@@ -403,24 +411,32 @@ kubectl get all -n cattle-system
 
 ### Изменение домена
 
-Отредактируйте `rancher.yaml`:
+Отредактируйте `helm/custom-values/lab-home.yaml`:
 
 ```yaml
 hostname: ваш-домен.lab-home.com
 ```
 
-И обновите `CATTLE_SERVER_URL`:
+И обновите `CATTLE_SERVER_URL` в том же файле:
 ```yaml
 extraEnv:
   - name: CATTLE_SERVER_URL
     value: https://ваш-домен.lab-home.com
 ```
 
+И в блоке `global.cattle.ssl.fqdn`:
+```yaml
+global:
+  cattle:
+    ssl:
+      fqdn: ваш-домен.lab-home.com
+```
+
 Затем синхронизируйте Application в ArgoCD.
 
 ### Настройка ресурсов
 
-Для изменения ресурсов отредактируйте `rancher.yaml`:
+Для изменения ресурсов отредактируйте `helm/custom-values/lab-home.yaml`:
 
 ```yaml
 resources:
@@ -434,20 +450,17 @@ resources:
 
 ### Обновление версии Rancher
 
-Измените `targetRevision` в `rancher.yaml`:
+Измените `targetRevision` в `application.yaml` (если переключитесь на внешний Helm repo) или замените чарт в `helm/charts/rancher-<версия>` и путь `path` в `application.yaml`:
 
 ```yaml
+# Вариант с чартом из Git (текущий): замените каталог helm/charts/rancher-2.13.0 на новую версию и path в application.yaml
 source:
-  targetRevision: "2.8.5"  # Конкретная версия
-  # или
-  targetRevision: "*"      # Последняя версия из stable (по умолчанию)
+  path: 03-argocd/rancher/helm/charts/rancher-2.14.0  # пример для 2.14
 ```
-
-ArgoCD автоматически синхронизирует изменения.
 
 ### Обновление конфигурации
 
-1. Отредактируйте `rancher.yaml`
+1. Отредактируйте `helm/custom-values/lab-home.yaml` или `application.yaml`
 2. Закоммитьте изменения в Git
 3. ArgoCD автоматически обнаружит изменения и синхронизирует (если включена автоматическая синхронизация)
 
@@ -566,7 +579,7 @@ argocd app sync rancher
 kubectl delete application rancher -n argocd
 
 # Применить снова
-kubectl apply -f 03-argocd/rancher/rancher.yaml
+kubectl apply -f 03-argocd/rancher/application.yaml
 ```
 
 </details>
@@ -620,7 +633,7 @@ kubectl get certificate rancher-tls -n cattle-system
 Для production окружения используйте Let's Encrypt:
 
 1. Создайте ClusterIssuer для Let's Encrypt (см. cert-manager README)
-2. Обновите конфигурацию Rancher в `rancher.yaml`:
+2. Обновите конфигурацию Rancher в `helm/custom-values/lab-home.yaml`:
    ```yaml
    ingress:
      annotations:
