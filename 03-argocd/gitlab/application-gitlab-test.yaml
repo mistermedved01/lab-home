@@ -1,0 +1,39 @@
+---
+# ArgoCD Application: GitLab TEST (проверка восстановления из бэкапа)
+# namespace: gitlab-test, host: https://gitlab-test.lab-home.com
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: gitlab-test
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/mistermedved01/lab-home.git
+    path: 03-argocd/gitlab/helm/charts/gitlab-9.7.1
+    targetRevision: main
+    helm:
+      releaseName: gitlab-test
+      valueFiles:
+        - ../../custom-values/lab-home-test.yaml
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: gitlab-test
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
