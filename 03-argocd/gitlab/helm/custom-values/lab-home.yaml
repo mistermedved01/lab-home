@@ -20,6 +20,8 @@ gitlab-runner:
 
 # === GLOBAL ===
 global:
+  nodeSelector:
+    lab-home.io/gitlab: "true"
   hosts:
     domain: lab-home.com
     https: true
@@ -59,6 +61,12 @@ gitlab:
     enabled: false
   webservice:
     replicas: 1
+    deployment:
+      livenessProbe:
+        initialDelaySeconds: 200   # GitLab долго грузится (1–3 мин)
+      readinessProbe:
+        initialDelaySeconds: 120
+        failureThreshold: 12
     resources:
       requests:
         cpu: 300m
@@ -125,6 +133,8 @@ postgresql:
     username: gitlab
     password: "gitlab123"
   primary:
+    nodeSelector:
+      lab-home.io/gitlab: "true"
     resources:
       requests:
         cpu: 250m
@@ -137,6 +147,8 @@ redis:
   install: true
   architecture: standalone
   master:
+    nodeSelector:
+      lab-home.io/gitlab: "true"
     persistence:
       enabled: true
       size: 2Gi
