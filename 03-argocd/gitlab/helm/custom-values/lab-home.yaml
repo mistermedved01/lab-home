@@ -1,0 +1,136 @@
+# GitLab values для окружения lab-home (чарт helm/charts/gitlab-9.7.1)
+
+# === ОСНОВНЫЕ НАСТРОЙКИ ===
+installCertmanager: false
+
+upgradeCheck:
+  enabled: false
+
+nginx-ingress:
+  enabled: false
+
+prometheus:
+  install: false
+
+registry:
+  enabled: false
+
+gitlab-runner:
+  install: false
+
+# === GLOBAL ===
+global:
+  hosts:
+    domain: lab-home.com
+    https: true
+  ingress:
+    configureCertmanager: false
+    class: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: "selfsigned-issuer"
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    tls:
+      enabled: true
+
+  kas:
+    enabled: false
+
+  appConfig:
+    artifacts:
+      enabled: false
+    lfs:
+      enabled: false
+    uploads:
+      enabled: false
+    packages:
+      enabled: false
+
+  minio:
+    enabled: false
+  grafana:
+    enabled: false
+
+# === GITLAB ===
+gitlab:
+  upgradeCheck:
+    enabled: false
+  webservice:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 300m
+        memory: 1.5G
+      limits:
+        cpu: "1"
+        memory: 2.5G
+  sidekiq:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 400m
+        memory: 1G
+      limits:
+        cpu: "1"
+        memory: 2G
+  gitaly:
+    replicas: 1
+    persistence:
+      storageClass: local-path
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+  gitlab-shell:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+  kas:
+    enabled: false
+  gitlab-exporter:
+    enabled: false
+  toolbox:
+    enabled: false
+
+# === БАЗЫ ===
+postgresql:
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: local-path
+  auth:
+    username: gitlab
+    password: "gitlab123"
+  primary:
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+redis:
+  install: true
+  architecture: standalone
+  master:
+    persistence:
+      enabled: true
+      size: 2Gi
+      storageClass: local-path
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 300m
+        memory: 256Mi
+  replica:
+    replicaCount: 0

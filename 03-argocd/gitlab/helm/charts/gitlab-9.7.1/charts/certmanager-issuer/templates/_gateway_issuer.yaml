@@ -1,0 +1,25 @@
+{{- if .Values.global.gatewayApi.configureCertmanager }}
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: {{ include "gitlab.gatewayApi.certmanager.issuer" . }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "gitlab.standardLabels" . | nindent 4 }}
+    {{- include "gitlab.commonLabels" . | nindent 4 }}
+spec:
+  acme:
+    server: {{ .Values.server | quote }}
+    {{- with .Values.email }}
+    email: {{ . }}
+    {{- end }}
+    privateKeySecretRef:
+      name: {{ .Release.Name }}-gateway-acme-key
+    solvers:
+      - http01:
+          gatewayHTTPRoute:
+            parentRefs:
+              - name: {{ include "gitlab.gatewayApi.gateway" . }}
+                namespace: {{ $.Release.Namespace }}
+                kind: Gateway
+{{- end }}

@@ -1,0 +1,26 @@
+{{- if .Values.defaultBackend.enabled }}
+{{- range .Values.defaultBackend.extraConfigMaps }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    {{- include "gitlab.standardLabels" . | nindent 4 }}
+    {{- include "gitlab.commonLabels" . | nindent 4 }}
+    {{- include "ingress-nginx.labels" $ | nindent 4 }}
+    component: "{{ .Values.defaultBackend.name }}"
+    app.kubernetes.io/component: default-backend
+    {{- with $.Values.defaultBackend.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- with .labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  name: {{ .name }}
+  namespace: {{ include "ingress-nginx.namespace" $ }}
+data:
+  {{- with .data }}
+  {{- toYaml . | nindent 2 }}
+  {{- end }}
+{{- end }}
+{{- end }}

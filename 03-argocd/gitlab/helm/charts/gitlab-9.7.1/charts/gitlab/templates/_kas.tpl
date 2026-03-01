@@ -1,0 +1,71 @@
+{{/* ######### KAS related templates */}}
+
+{{- define "gitlab.kas.mountSecrets" -}}
+{{- if (or .Values.global.kas.enabled .Values.global.appConfig.gitlab_kas.enabled) -}}
+# mount secret for kas
+- secret:
+    name: {{ template "gitlab.kas.secret" . }}
+    items:
+      - key: {{ template "gitlab.kas.key" . }}
+        path: kas/.gitlab_kas_secret
+{{- end -}}
+{{- end -}}{{/* "gitlab.kas.mountSecrets" */}}
+
+{{/*
+Returns the KAS external URL (for external agentk connections)
+*/}}
+{{- define "gitlab.appConfig.kas.externalUrl" -}}
+{{-   if .Values.global.appConfig.gitlab_kas.externalUrl -}}
+{{-     .Values.global.appConfig.gitlab_kas.externalUrl -}}
+{{-   else -}}
+{{-     $hostname := include "gitlab.kas.hostname" . -}}
+{{-     if or .Values.global.hosts.https .Values.global.hosts.kas.https -}}
+{{-       printf "wss://%s" $hostname -}}
+{{-     else -}}
+{{-       printf "ws://%s" $hostname -}}
+{{-     end -}}
+{{-   end -}}
+{{- end -}}
+
+{{- define "gitlab.kas.internal.scheme" -}}
+{{- printf "%s" (ternary "grpcs" "grpc" (eq $.Values.global.kas.tls.enabled true)) -}}
+{{- end -}}
+
+{{/*
+Returns the KAS internal URL (for GitLab backend connections)
+*/}}
+{{- define "gitlab.appConfig.kas.internalUrl" -}}
+{{-   if .Values.global.appConfig.gitlab_kas.internalUrl -}}
+{{-     .Values.global.appConfig.gitlab_kas.internalUrl -}}
+{{-   else -}}
+{{-     $serviceHost := include "gitlab.kas.serviceHost" . -}}
+{{-     $scheme := include "gitlab.kas.internal.scheme" . -}}
+{{-     $port := .Values.global.kas.service.apiExternalPort -}}
+{{-     printf "%s://%s:%s" $scheme $serviceHost (toString $port) -}}
+{{-   end -}}
+{{- end -}}
+
+{{/*
+Returns the KAS client timeout in seconds
+*/}}
+{{- define "gitlab.appConfig.kas.clientTimeoutSeconds" -}}
+{{- with .Values.global.appConfig.gitlab_kas.clientTimeoutSeconds -}}
+client_timeout_seconds: {{ . }}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Return the KAS service host
+*/}}
+{{- define "gitlab.kas.serviceHost" -}}
+{{-     $serviceName := include "gitlab.kas.serviceName" . -}}
+{{-     printf "%s.%s.svc" $serviceName $.Release.Namespace -}}
+{{- end -}}
+
+{{/*
+Return the KAS service name
+*/}}
+{{- define "gitlab.kas.serviceName" -}}
+{{- include "gitlab.other.fullname" (dict "context" . "chartName" "kas") -}}
+{{- end -}}
+

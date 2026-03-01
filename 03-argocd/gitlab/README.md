@@ -127,6 +127,13 @@ graph TB
     Redis --> PV
 ```
 
+### Основные параметры
+
+- **Файл Application**: `03-argocd/gitlab/application.yaml`
+- **Namespace**: `gitlab`
+- **Тип источника**: Git (распакованный чарт GitLab 9.7.1 в `helm/charts/gitlab-9.7.1`, values в `helm/custom-values/lab-home.yaml`)
+- **URL**: `https://gitlab.lab-home.com` (или `http://gitlab.lab-home.com:30080` до настройки Ingress)
+
 </details>
 
 <details>
@@ -134,12 +141,21 @@ graph TB
 
 ---
 
+Структура как в harbor и vault: чарт в Git, values в `helm/custom-values/lab-home.yaml`.
+
 ```
-gitlab/
-├── application.yaml       # ArgoCD Application манифест с inline Helm values
-├── certificate.yaml       # Certificate ресурс для TLS (опционально)
-└── README.md              # Этот файл
+03-argocd/gitlab/
+├── application.yaml              # ArgoCD Application (path: helm/charts/gitlab-9.7.1, valueFiles: ../../custom-values/lab-home.yaml)
+├── certificate.yaml              # Certificate для TLS (опционально, при проблемах с ключом)
+├── README.md                     # Документация (этот файл)
+└── helm/
+    ├── custom-values/
+    │   └── lab-home.yaml         # Values для окружения lab-home
+    └── charts/
+        └── gitlab-9.7.1/         # Распакованный чарт GitLab 9.7.1 (из https://charts.gitlab.io)
 ```
+
+**Примечание**: Namespace `gitlab` создаётся автоматически через `CreateNamespace=true`.
 
 </details>
 
@@ -516,35 +532,30 @@ gitlab:
         memory: 2Gi
 ```
 
-### Использование values.yaml файла
+### Values и конфигурация
 
-Вместо inline values в `application.yaml` можно использовать отдельный файл `values.yaml`. Для этого отредактируйте `application.yaml`:
-
-```yaml
-source:
-  helm:
-    valueFiles:
-      - values.yaml
-```
+Values задаются в `helm/custom-values/lab-home.yaml`. При изменении файла закоммитьте в Git — ArgoCD подхватит изменения при следующей синхронизации.
 
 ### Обновление версии GitLab
 
-Измените `targetRevision` в `application.yaml`:
+При использовании распакованного чарта из Git:
 
-```yaml
-source:
-  targetRevision: "7.0.0"  # Конкретная версия
-  # или
-  targetRevision: "*"      # Последняя версия (по умолчанию)
-```
+1. Скачайте новую версию чарта:
+   ```bash
+   cd 03-argocd/gitlab
+   helm pull gitlab/gitlab --repo https://charts.gitlab.io --version <версия> --untar --untardir helm/charts
+   mv helm/charts/gitlab helm/charts/gitlab-<версия>
+   ```
+2. В `application.yaml` измените `path` на `03-argocd/gitlab/helm/charts/gitlab-<версия>`.
+3. Файл `helm/custom-values/lab-home.yaml` менять не нужно (если ключи совместимы с новой версией).
 
-ArgoCD автоматически синхронизирует изменения.
+После push в Git ArgoCD синхронизирует приложение.
 
 ### Обновление конфигурации
 
-1. Отредактируйте `application.yaml` или `values.yaml`
-2. Закоммитьте изменения в Git
-3. ArgoCD автоматически обнаружит изменения и синхронизирует (если включена автоматическая синхронизация)
+1. Отредактируйте `helm/custom-values/lab-home.yaml` (или `application.yaml` при смене пути к чарту).
+2. Закоммитьте изменения в Git.
+3. ArgoCD автоматически обнаружит изменения и синхронизирует (при включённой автоматической синхронизации).
 
 </details>
 

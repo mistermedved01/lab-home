@@ -1,0 +1,92 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "gitlab-zoekt.configExternalGatewayMapName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "gitlab-zoekt.labels" . | nindent 4 }}
+    {{- include "gitlab.standardLabels" . | nindent 4 }}
+    {{- include "gitlab.commonLabels" . | nindent 4 }}
+data:
+  nginx.conf: |
+    events {
+        use epoll;
+    }
+
+    http {
+        {{- if .Values.gateway.http2 }}
+        http2 on;
+        {{- end }}
+        server {
+            {{- if .Values.gateway.tls.certificate.enabled }}
+            listen       {{ .Values.gateway.listen.port }} ssl;
+            ssl_certificate /etc/ssl/tls.crt;
+            ssl_certificate_key /etc/ssl/tls.key;
+            ssl_protocols TLSv1.2 TLSv1.3;
+            {{- else }}
+            listen       {{ .Values.gateway.listen.port }};
+            {{- end }}
+            server_tokens off;
+
+            proxy_http_version 1.1;
+            proxy_set_header Host            $host;
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_set_header Authorization $http_authorization;
+            proxy_set_header Gitlab-Zoekt-Api-Request $http_gitlab_zoekt_api_request;
+
+            proxy_next_upstream off;
+
+            resolver {{ .Values.gateway.dnsResolver }};
+
+            set $backend_gateway {{ include "gitlab-zoekt.backendSvcFqdn" . }}:{{ .Values.gateway.listen.port }};
+
+            location = /health {
+              return 200;
+            }
+
+            location ~ ^/(api|indexer|webserver)/.* {
+              {{- with .Values.gateway }}
+              set $target_host http{{ .tls.certificate.enabled | ternary "s" "" }}://$backend_gateway;
+              {{- end }}
+
+              proxy_pass $target_host;
+              proxy_read_timeout 30m;
+            }
+
+            # HTTP webserver and indexer nodes endpoints
+            location ~ ^/nodes/([^/]+)/(api|indexer|webserver)/(.*) {
+              {{- with .Values.gateway }}
+              set $target_host http{{ .tls.certificate.enabled | ternary "s" "" }}://$1:{{ .listen.port }}/$2/$3;
+              {{- end }}
+
+              proxy_pass $target_host;
+              proxy_read_timeout 30m;
+            }
+
+            # gRPC catch all
+            location / {
+              {{- with .Values.gateway }}
+              # If X-Forwarded-Path header is provided, extract the fully qualified domain name
+              # Format should be: /nodes/full.qualified.domain.name
+              if ($http_x_forwarded_path ~* "^/nodes/(.+)$") {
+                set $node_name $1:{{ .listen.port }};
+              }
+
+              # Set appropriate grpc target scheme based on TLS configuration
+              {{- if .tls.certificate.enabled }}
+              set $grpc_target grpcs://$node_name;
+              {{- else }}
+              set $grpc_target grpc://$node_name;
+              {{- end }}
+              {{- end }}
+
+              # Forward to the target node
+              grpc_pass $grpc_target;
+
+              grpc_set_header Content-Type application/grpc;
+
+              grpc_read_timeout 1m;
+              grpc_send_timeout 1m;
+            }
+        }
+    }

@@ -1,107 +1,24 @@
+---
+# ArgoCD Application для GitLab
+# Структура как в harbor и vault: чарт из Git, values из custom-values/lab-home.yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: gitlab
   namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
+
   source:
-    repoURL: https://charts.gitlab.io
-    chart: gitlab
-    targetRevision: 9.7.1
+    repoURL: https://github.com/mistermedved01/lab-home.git
+    path: 03-argocd/gitlab/helm/charts/gitlab-9.7.1
+    targetRevision: main
     helm:
-      values: |
-        # === ОСНОВНЫЕ НАСТРОЙКИ ===
-        installCertmanager: false
-
-        upgradeCheck:
-          enabled: false
-
-        nginx-ingress:
-          enabled: false
-
-        prometheus:
-          install: false
-
-        registry:
-          enabled: false
-
-        gitlab-runner:
-          install: false
-
-        # === GLOBAL ===
-        global:
-          hosts:
-            domain: lab-home.com
-            https: true
-          ingress:
-            configureCertmanager: false
-            class: nginx
-            annotations:
-              cert-manager.io/cluster-issuer: "selfsigned-issuer"
-              nginx.ingress.kubernetes.io/ssl-redirect: "true"
-            tls:
-              enabled: true
-
-          kas:
-            enabled: false
-
-          appConfig:
-            artifacts:
-              enabled: false
-            lfs:
-              enabled: false
-            uploads:
-              enabled: false
-            packages:
-              enabled: false
-
-          minio:
-            enabled: false
-          grafana:
-            enabled: false
-
-        # === GITLAB ===
-        gitlab:
-          upgradeCheck:
-            enabled: false
-          webservice:
-            replicas: 1
-          sidekiq:
-            replicas: 1
-          gitaly:
-            replicas: 1
-            persistence:
-              storageClass: local-path
-          gitlab-shell:
-            replicas: 1
-          kas:
-            enabled: false
-          gitlab-exporter:
-            enabled: false
-          toolbox:
-            enabled: false
-
-        # === БАЗЫ ===
-        postgresql:
-          persistence:
-            enabled: true
-            size: 10Gi
-            storageClass: local-path
-          auth:
-            username: gitlab
-            password: "gitlab123"
-
-        redis:
-          install: true
-          architecture: standalone
-          master:
-            persistence:
-              enabled: true
-              size: 2Gi
-              storageClass: local-path
-          replica:
-            replicaCount: 0
+      releaseName: gitlab
+      valueFiles:
+        - ../../custom-values/lab-home.yaml
 
   destination:
     server: https://kubernetes.default.svc
@@ -111,5 +28,12 @@ spec:
     automated:
       prune: true
       selfHeal: true
+      allowEmpty: false
     syncOptions:
       - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
