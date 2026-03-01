@@ -1,10 +1,11 @@
 # Velero values для lab-home (MinIO S3). Чарт: helm/charts/velero-8.6.0
 
-# Образ kubectl для Job upgrade-crds: чарт по умолчанию подставляет версию кластера (1.34),
-# но bitnami/kubectl:1.34 может не существовать — задаём рабочий тег явно.
+# Образ kubectl для Job upgrade-crds: Docker Hardened Images (dhi.io/kubectl),
+# версии указаны явно (1.35, 1.34, …). Bitnami по умолчанию подставлял версию кластера (1.34), которой нет.
 kubectl:
   image:
-    tag: "1.32"
+    repository: dhi.io/kubectl
+    tag: "1.35"
 
 initContainers:
   - name: velero-plugin-for-aws
