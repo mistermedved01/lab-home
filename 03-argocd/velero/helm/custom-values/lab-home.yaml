@@ -9,6 +9,10 @@ kubectl:
     repository: docker.io/bitnami/kubectl
     tag: "latest"
 
+# Job upgrade-crds падает: контейнер velero не может выполнить /tmp/kubectl из init (разные образы).
+# CRDs при установке и так берутся из чарта (crds/), Job нужен только для апгрейда CRDs при смене версии чарта.
+upgradeCRDs: false
+
 initContainers:
   - name: velero-plugin-for-aws
     image: velero/velero-plugin-for-aws:v1.11.0
