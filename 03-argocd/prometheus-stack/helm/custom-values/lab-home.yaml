@@ -1,0 +1,108 @@
+# kube-prometheus-stack values для окружения lab-home (чарт helm/charts/kube-prometheus-stack-81.6.0)
+# См. application.yaml: path=helm/charts/kube-prometheus-stack-81.6.0, valueFiles=../../custom-values/lab-home.yaml
+
+cleanPrometheusOperatorObjectNames: true
+
+prometheusOperator:
+  enabled: true
+  # Отключаем admission webhooks, чтобы PreSync Job не блокировала синк в Argo CD
+  admissionWebhooks:
+    enabled: false
+
+prometheus:
+  enabled: true
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: "selfsigned-issuer"
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    hosts:
+      - prometheus.lab-home.com
+    paths:
+      - /
+    tls:
+      - secretName: prometheus-tls
+        hosts:
+          - prometheus.lab-home.com
+  prometheusSpec:
+    replicas: 1
+    retention: 1d
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    serviceMonitorSelectorNilUsesHelmValues: false
+    storageSpec:
+      emptyDir: {}
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "250m"
+      limits:
+        memory: "1Gi"
+        cpu: "500m"
+
+alertmanager:
+  enabled: true
+  alertmanagerSpec:
+    replicas: 1
+    storage:
+      emptyDir: {}
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "250m"
+
+grafana:
+  enabled: true
+  replicas: 1
+  adminPassword: admin
+  service:
+    type: ClusterIP
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 250m
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: "selfsigned-issuer"
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    hosts:
+      - grafana.lab-home.com
+    tls:
+      - secretName: grafana-tls
+        hosts:
+          - grafana.lab-home.com
+
+nodeExporter:
+  enabled: true
+  hostNetwork: false
+  hostPID: false
+  hostIPC: false
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "128Mi"
+      cpu: "100m"
+
+kubeStateMetrics:
+  enabled: true
+  replicas: 1
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "50m"
+    limits:
+      memory: "256Mi"
+      cpu: "100m"

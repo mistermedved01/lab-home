@@ -1,0 +1,4 @@
+# Default values for wrapper chart.
+# Переопределения — в custom-values/lab-home.yaml
+
+kube-prometheus-stack: {}

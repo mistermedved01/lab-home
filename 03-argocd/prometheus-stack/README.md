@@ -35,7 +35,7 @@
 
 3. **Примените ArgoCD Application для Prometheus Stack:**
    ```bash
-   kubectl apply -f 03-argocd/prometheus-stack/prometheus-stack.yaml
+   kubectl apply -f 03-argocd/prometheus-stack/application.yaml
    ```
 
 4. **Дождитесь готовности (5-10 минут):**
@@ -116,11 +116,20 @@ graph TB
 
 ```
 prometheus-stack/
-├── prometheus-stack.yaml  # ArgoCD Application манифест с inline Helm values
-└── README.md              # Этот файл
+├── application.yaml              # ArgoCD Application (path: helm/charts/kube-prometheus-stack-81.6.0, valueFiles: ../../custom-values/lab-home.yaml)
+├── README.md
+├── docs/
+└── helm/
+    ├── Chart.yaml                # Wrapper для обновления чарта (helm dependency update)
+    ├── Chart.lock
+    ├── values.yaml
+    ├── custom-values/
+    │   └── lab-home.yaml          # Values для окружения lab-home
+    └── charts/
+        └── kube-prometheus-stack-81.6.0/   # Чарт kube-prometheus-stack (как в harbor/vault)
 ```
 
-**Примечание**: Namespace `monitoring` создается автоматически через `CreateNamespace=true` в `prometheus-stack.yaml`.
+**Примечание**: Namespace `monitoring` создается автоматически через `CreateNamespace=true` в `application.yaml`.
 
 </details>
 
@@ -222,7 +231,7 @@ kubectl describe clusterissuer selfsigned-issuer
 
 ```bash
 # Применить Application
-kubectl apply -f 03-argocd/prometheus-stack/prometheus-stack.yaml
+kubectl apply -f 03-argocd/prometheus-stack/application.yaml
 
 # Проверить статус Application
 kubectl get application prometheus-stack -n argocd
@@ -464,7 +473,7 @@ kubectl get all -n monitoring
 
 ### Изменение домена Grafana
 
-Отредактируйте `prometheus-stack.yaml`:
+Отредактируйте `helm/custom-values/lab-home.yaml`:
 
 ```yaml
 grafana:
@@ -481,7 +490,7 @@ grafana:
 
 ### Настройка ресурсов
 
-Для изменения ресурсов отредактируйте соответствующие секции в `prometheus-stack.yaml`:
+Для изменения ресурсов отредактируйте соответствующие секции в `helm/custom-values/lab-home.yaml`:
 
 ```yaml
 prometheus:
@@ -497,18 +506,11 @@ prometheus:
 
 ### Обновление версии
 
-Измените `targetRevision` в `prometheus-stack.yaml`:
-
-```yaml
-source:
-  targetRevision: "80.10.0"  # Конкретная версия
-```
-
-ArgoCD автоматически синхронизирует изменения.
+Чтобы обновить версию чарта: обновите версию в `helm/Chart.yaml` (dependencies), выполните `helm dependency update` в каталоге `helm/`, распакуйте новый tgz в `helm/charts/kube-prometheus-stack-<version>` и при необходимости обновите путь в `application.yaml`.
 
 ### Обновление конфигурации
 
-1. Отредактируйте `prometheus-stack.yaml`
+1. Отредактируйте `helm/custom-values/lab-home.yaml`
 2. Закоммитьте изменения в Git
 3. ArgoCD автоматически обнаружит изменения и синхронизирует (если включена автоматическая синхронизация)
 
@@ -739,7 +741,7 @@ kubectl get certificate grafana-tls -n monitoring
 Для production окружения используйте Let's Encrypt:
 
 1. Создайте ClusterIssuer для Let's Encrypt (см. cert-manager README)
-2. Обновите конфигурацию Grafana в `prometheus-stack.yaml`:
+2. Обновите конфигурацию Grafana в `helm/custom-values/lab-home.yaml`:
    ```yaml
    grafana:
      ingress:
