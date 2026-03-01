@@ -44,6 +44,9 @@ global:
       enabled: false
     packages:
       enabled: false
+    backups:
+      bucket: gitlab-toolbox-backup
+      tmpBucket: gitlab-toolbox-backup-tmp
 
   minio:
     enabled: false
@@ -97,7 +100,20 @@ gitlab:
   gitlab-exporter:
     enabled: false
   toolbox:
-    enabled: false
+    enabled: true
+    backups:
+      cron:
+        enabled: true
+        schedule: "0 2 * * *"   # каждый день в 02:00
+        persistence:
+          enabled: true
+          size: 10Gi
+          storageClass: local-path
+      objectStorage:
+        backend: s3
+        config:
+          secret: gitlab-backup-s3-config
+          key: config
 
 # === БАЗЫ ===
 postgresql:

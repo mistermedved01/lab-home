@@ -833,18 +833,63 @@ kubectl get certificate gitlab-wildcard-tls -n gitlab
 
 ### Настройка автоматических бэкапов
 
-1. **Использовать встроенные возможности GitLab**:
-   - Настроить периодические бэкапы через GitLab settings
-   - Настроить хранение бэкапов на внешнем хранилище
+Включён встроенный механизм GitLab (CronJob в toolbox): бэкапы по расписанию в S3-совместимое хранилище (например, MinIO tenant).
 
-2. **Использовать внешние инструменты**:
-   - **Velero**: Для бэкапа Kubernetes ресурсов и PersistentVolumes
-   - **Kasten K10**: Комплексное решение для бэкапа
-   - **pg_dump**: Для ручных бэкапов PostgreSQL
+**Что уже настроено в `helm/custom-values/lab-home.yaml`:**
+- `global.appConfig.backups.bucket`: `gitlab-backups`
+- `global.appConfig.backups.tmpBucket`: `gitlab-backups-tmp`
+- `gitlab.toolbox.enabled: true`, `backups.cron.enabled: true`
+- Расписание: ежедневно в 02:00 (`0 2 * * *`)
+- Бэкенд: S3, конфиг из Secret `gitlab-backup-s3-config` (ключ `config`)
 
-3. **Бэкапы Gitaly репозиториев**:
-   - Настроить периодические бэкапы через GitLab backup
-   - Использовать внешнее хранилище (S3, NFS)
+**Шаги для активации бэкапов:**
+
+1. **Создать бакеты в MinIO** (например, в MinIO tenant `minio.lab-home.com`):
+   - `gitlab-backups` — для бэкапов
+   - `gitlab-backups-tmp` — временные файлы (можно создать один общий бакет и указать его в обоих полях в values)
+
+2. **Создать Secret с конфигом S3** в namespace `gitlab`. Содержимое ключа `config` — файл в формате `.s3cfg` (для MinIO за Ingress):
+
+   ```ini
+   [default]
+   access_key = <ACCESS_KEY>
+   secret_key = <SECRET_KEY>
+   bucket_location = us-east-1
+   host_base = minio.lab-home.com
+   host_bucket = minio.lab-home.com/%(bucket)
+   use_https = True
+   ```
+
+   Если MinIO доступен по HTTP внутри кластера (например, сервис `minio-tenant-minio.minio-operator.svc.cluster.local:9000`), можно использовать:
+   `host_base = minio-tenant-minio.minio-operator.svc.cluster.local`, без `use_https` или `use_https = False`.
+
+   Создание Secret из файла `.s3cfg`:
+   ```bash
+   kubectl create secret generic gitlab-backup-s3-config -n gitlab \
+     --from-file=config=/path/to/.s3cfg
+   ```
+
+   Или из literal (подставьте свои ключи и host):
+   ```bash
+   kubectl create secret generic gitlab-backup-s3-config -n gitlab \
+     --from-literal=config="[default]
+   access_key = minioadmin
+   secret_key = minioadmin123
+   bucket_location = us-east-1
+   host_base = minio.lab-home.com
+   host_bucket = minio.lab-home.com/%(bucket)
+   use_https = True"
+   ```
+
+3. После создания Secret и бакетов CronJob `gitlab-toolbox-backup` в namespace `gitlab` будет запускаться по расписанию. Проверка:
+   ```bash
+   kubectl get cronjob -n gitlab
+   kubectl get jobs -n gitlab
+   ```
+
+**Дополнительно (внешние инструменты):**
+- **Velero** — бэкап ресурсов Kubernetes и PersistentVolumes
+- **pg_dump** — ручные бэкапы PostgreSQL при миграции
 
 ### Миграция на внешние базы данных
 
