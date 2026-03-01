@@ -1,0 +1,41 @@
+# Velero values для lab-home (MinIO S3). Чарт: helm/charts/velero-8.6.0
+
+initContainers:
+  - name: velero-plugin-for-aws
+    image: velero/velero-plugin-for-aws:v1.11.0
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+      - mountPath: /target
+        name: plugins
+
+configuration:
+  backupStorageLocation:
+    - name: default
+      provider: aws
+      bucket: velero-backup
+      default: true
+      config:
+        region: minio
+        s3Url: https://minio-tenant-hl.minio-operator.svc.cluster.local:9000
+        s3ForcePathStyle: "true"
+        insecureSkipTLSVerify: "true"
+      credential:
+        name: velero-cloud-credentials
+        key: cloud
+  volumeSnapshotLocation: []
+  defaultVolumesToFsBackup: true
+
+credentials:
+  useSecret: true
+  existingSecret: velero-cloud-credentials
+
+deployNodeAgent: true
+snapshotsEnabled: false
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi

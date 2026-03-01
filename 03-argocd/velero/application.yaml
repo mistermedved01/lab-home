@@ -1,0 +1,38 @@
+---
+# ArgoCD Application для Velero (бэкапы кластера в MinIO S3)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: velero
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/mistermedved01/lab-home.git
+    path: 03-argocd/velero/helm/charts/velero-8.6.0
+    targetRevision: main
+    helm:
+      releaseName: velero
+      valueFiles:
+        - ../../custom-values/lab-home.yaml
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: velero
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
