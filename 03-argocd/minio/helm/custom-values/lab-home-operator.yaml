@@ -1,0 +1,44 @@
+# MinIO Operator values для окружения lab-home
+# Чарт: helm/charts/operator-5.0.18
+# Namespace задаётся в Argo CD destination
+
+# MinIO Console (веб-интерфейс Operator)
+console:
+  enabled: true
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: "selfsigned-issuer"
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+      nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+      kubernetes.io/ingress.class: nginx
+    host: minio-operator.lab-home.com
+    path: /
+    pathType: Prefix
+    number: 9090
+    tls:
+      - secretName: minio-operator-console-tls
+        hosts:
+          - minio-operator.lab-home.com
+
+# MinIO Operator
+operator:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+# MinIO KES (Key Encryption Service) — настраивается на уровне Tenant при необходимости

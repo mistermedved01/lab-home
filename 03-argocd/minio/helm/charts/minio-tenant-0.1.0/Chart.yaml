@@ -1,0 +1,6 @@
+apiVersion: v2
+name: minio-tenant
+description: MinIO Tenant (CR + Secret + Ingress) for lab-home
+type: application
+version: 0.1.0
+appVersion: "1.0"

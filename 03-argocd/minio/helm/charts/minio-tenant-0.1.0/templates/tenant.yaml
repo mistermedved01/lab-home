@@ -1,0 +1,33 @@
+apiVersion: minio.min.io/v2
+kind: Tenant
+metadata:
+  name: {{ .Values.tenant.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: minio
+spec:
+  image: {{ .Values.tenant.image }}
+  configuration:
+    name: {{ .Values.tenant.configurationSecret }}
+  exposeServices:
+    minio: true
+    console: true
+  pools:
+    {{- range .Values.tenant.pools }}
+    - name: {{ .name }}
+      servers: {{ .servers }}
+      volumesPerServer: {{ .volumesPerServer }}
+      resources: {{ toYaml .resources | nindent 8 }}
+      volumeClaimTemplate:
+        metadata:
+          name: data
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          {{- if .volumeClaimTemplate.storageClassName }}
+          storageClassName: {{ .volumeClaimTemplate.storageClassName }}
+          {{- end }}
+          resources:
+            requests:
+              storage: {{ .volumeClaimTemplate.size }}
+    {{- end }}

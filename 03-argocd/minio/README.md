@@ -35,7 +35,7 @@
 
 3. **Примените ArgoCD Application для MinIO Operator:**
    ```bash
-   kubectl apply -f 03-argocd/minio/operator/application.yaml
+   kubectl apply -f 03-argocd/minio/application-operator.yaml
    ```
 
 4. **Дождитесь готовности Operator (2-3 минуты):**
@@ -46,11 +46,11 @@
 
 5. **Создайте MinIO Tenant (через ArgoCD Application):**
    ```bash
-   # Применить ArgoCD Application - он автоматически возьмет tenant.yaml из Git
-   kubectl apply -f 03-argocd/minio/tenant/application.yaml
+   # Применить ArgoCD Application (Helm-чарт Tenant)
+   kubectl apply -f 03-argocd/minio/application-tenant.yaml
    ```
    
-   ⚠️ **Важно**: `tenant.yaml` хранится в Git и управляется через ArgoCD. Не нужно применять его вручную - ArgoCD сделает это автоматически после применения `tenant/application.yaml`.
+   ⚠️ **Важно**: Tenant разворачивается через Helm-чарт; конфигурация — в `helm/custom-values/lab-home-tenant.yaml`.
 
 6. **Дождитесь готовности Tenant (3-5 минут):**
    ```bash
@@ -187,39 +187,35 @@ MinIO Operator предоставляет **два разных Console**:
 
 ```
 minio/
-├── operator/
-│   └── application.yaml      # ArgoCD Application для MinIO Operator (Helm chart)
-├── tenant/
-│   ├── application.yaml      # ArgoCD Application для MinIO Tenant (создается один раз, указывает на Git)
-│   ├── tenant.yaml           # MinIO Tenant CRD + Secret (хранится в Git, применяется ArgoCD автоматически)
-│   └── ingress.yaml          # Ingress для MinIO Tenant Console
-└── README.md                 # Этот файл
+├── application-operator.yaml    # ArgoCD Application для MinIO Operator
+├── application-tenant.yaml      # ArgoCD Application для MinIO Tenant (Helm)
+├── helm/
+│   ├── charts/
+│   │   ├── operator-5.0.18/      # Вендоренный Helm-чарт MinIO Operator
+│   │   └── minio-tenant-0.1.0/   # Helm-чарт MinIO Tenant (Secret + Tenant CR + Ingress)
+│   └── custom-values/
+│       ├── lab-home-operator.yaml  # Values для Operator (lab-home)
+│       └── lab-home-tenant.yaml  # Values для Tenant (lab-home)
+└── README.md
 ```
 
 **Пояснение структуры:**
 
-- **`operator/application.yaml`**: 
-  - Применяется один раз → создает ArgoCD Application для MinIO Operator через Helm chart
-  - Источник: `https://operator.min.io/` (Helm chart `operator`, версия `5.0.18`)
-  - Создает namespace `minio-operator` автоматически
-  - Включает MinIO Operator Console с Ingress на `minio-operator.lab-home.com`
+- **`application-operator.yaml`**:
+  - Создаёт ArgoCD Application для MinIO Operator
+  - Источник: путь в Git `03-argocd/minio/helm/charts/operator-5.0.18`, values — `helm/custom-values/lab-home-operator.yaml`
+  - Создаёт namespace `minio-operator`, включает Operator Console с Ingress на `minio-operator.lab-home.com`
 
-- **`tenant/application.yaml`**: 
-  - Применяется один раз → создает ArgoCD Application, который указывает ArgoCD брать `tenant.yaml` из Git
-  - Источник: Git репозиторий, путь `03-argocd/minio/tenant`
-  - Использует sync-wave: "1" для синхронизации после Operator
+- **`application-tenant.yaml`**:
+  - Создаёт ArgoCD Application для MinIO Tenant (Helm)
+  - Источник: чарт `03-argocd/minio/helm/charts/minio-tenant-0.1.0`, values — `helm/custom-values/lab-home-tenant.yaml`
+  - Sync-wave: "1" (после Operator)
 
-- **`tenant/tenant.yaml`**: 
-  - Хранится в Git → ArgoCD автоматически читает и применяет этот файл из репозитория
-  - Содержит MinIO Tenant CRD и Secret с credentials
-  - Определяет конфигурацию MinIO кластера (серверы, ресурсы, хранилище)
+- **Чарт `helm/charts/minio-tenant-0.1.0`**: 
+  - Шаблоны: Secret (credentials), Tenant CR, Ingress для Console
+  - Конфигурация: `helm/custom-values/lab-home-tenant.yaml` (пулы, ресурсы, домен, пароли)
 
-- **`tenant/ingress.yaml`**: 
-  - Ingress для Tenant Console (вход с Access Key / Secret Key)
-  - Домен: `minio.lab-home.com`
-  - Backend: `minio-tenant-console:9443` (HTTPS)
-
-**Примечание**: Namespace `minio-operator` создается автоматически через `CreateNamespace=true` в `operator/application.yaml`.
+**Примечание**: Namespace `minio-operator` создаётся автоматически через `CreateNamespace=true` в `application-operator.yaml`.
 
 </details>
 
@@ -323,7 +319,7 @@ kubectl describe clusterissuer selfsigned-issuer
 
 ```bash
 # Применить Application
-kubectl apply -f 03-argocd/minio/operator/application.yaml
+kubectl apply -f 03-argocd/minio/application-operator.yaml
 
 # Проверить статус Application
 kubectl get application minio-operator -n argocd
@@ -376,7 +372,7 @@ console-xxxxxxxxxx-xxxxx          1/1     Running   0          2m
 
 ```bash
 # Применить Tenant Application
-kubectl apply -f 03-argocd/minio/tenant/application.yaml
+kubectl apply -f 03-argocd/minio/application-tenant.yaml
 
 # Проверить статус Tenant Application
 kubectl get application minio-tenant -n argocd
@@ -453,7 +449,7 @@ kubectl get secret storage-configuration -n minio-operator -o jsonpath='{.data.c
 kubectl get secret storage-configuration -n minio-operator -o jsonpath='{.data.config\.env}' | base64 -d | grep MINIO_ROOT_PASSWORD
 ```
 
-**Примечание**: По умолчанию используются credentials из `tenant/tenant.yaml` (Secret `storage-configuration`):
+**Примечание**: По умолчанию используются credentials из `helm/custom-values/lab-home-tenant.yaml` (Secret `storage-configuration`):
 - Access Key: `minioadmin` (`MINIO_ROOT_USER`)
 - Secret Key: `minioadmin123` (`MINIO_ROOT_PASSWORD`)
 
@@ -682,21 +678,21 @@ kubectl run -it --rm --image=minio/mc:latest mc-client --restart=Never -n minio-
 
 **Хранилище:**
 
-- **MinIO Tenant**: 10Gi на сервер (настраивается в `tenant/tenant.yaml`)
+- **MinIO Tenant**: 10Gi на сервер (настраивается в `helm/custom-values/lab-home-tenant.yaml`)
 - Использует StorageClass `local-path`
 
 ### Изменение домена
 
 Отредактируйте соответствующие файлы:
 
-**Tenant Console** (`tenant/ingress.yaml`):
+**Tenant Console** (`helm/custom-values/lab-home-tenant.yaml`, секция `ingress`):
 ```yaml
 spec:
   rules:
     - host: ваш-домен.lab-home.com
 ```
 
-**Operator Console** (`operator/application.yaml`):
+**Operator Console** (`helm/custom-values/lab-home-operator.yaml`):
 ```yaml
 ingress:
   hosts:
@@ -709,7 +705,7 @@ ingress:
 
 Для изменения ресурсов отредактируйте соответствующие файлы:
 
-**MinIO Operator** (`operator/application.yaml`):
+**MinIO Operator** (`helm/custom-values/lab-home-operator.yaml`):
 ```yaml
 operator:
   resources:
@@ -721,7 +717,7 @@ operator:
       memory: 256Mi
 ```
 
-**MinIO Operator Console** (`operator/application.yaml`):
+**MinIO Operator Console** (`helm/custom-values/lab-home-operator.yaml`):
 ```yaml
 console:
   resources:
@@ -733,7 +729,7 @@ console:
       memory: 512Mi
 ```
 
-**MinIO Tenant** (`tenant/tenant.yaml`):
+**MinIO Tenant** (`helm/custom-values/lab-home-tenant.yaml`, секция `tenant.pools`):
 ```yaml
 resources:
   requests:
@@ -746,7 +742,7 @@ resources:
 
 ### Изменение размера хранилища
 
-Отредактируйте `tenant/tenant.yaml`:
+Отредактируйте `helm/custom-values/lab-home-tenant.yaml` (секция `tenant.pools[].volumeClaimTemplate`):
 
 ```yaml
 volumeClaimTemplate:
@@ -771,16 +767,20 @@ pools:
 
 ### Обновление версии MinIO Operator
 
-Измените `targetRevision` в `operator/application.yaml`:
+Обновите вендоренный чарт: скачайте новую версию и замените каталог в `helm/charts/`:
 
-```yaml
-source:
-  targetRevision: "5.0.18"  # Обновите до нужной версии
+```bash
+helm repo add minio-operator https://operator.min.io/
+helm pull minio-operator/operator --version 5.0.19 --untar -d /tmp
+rm -rf 03-argocd/minio/helm/charts/operator-5.0.18
+mv /tmp/operator 03-argocd/minio/helm/charts/operator-5.0.19
 ```
+
+Затем в `application-operator.yaml` измените `path` на `03-argocd/minio/helm/charts/operator-5.0.19`.
 
 ### Обновление версии MinIO Server
 
-Измените `image` в `tenant/tenant.yaml`:
+Измените `tenant.image` в `helm/custom-values/lab-home-tenant.yaml`:
 
 ```yaml
 image: minio/minio:RELEASE.2024-01-16T16-07-38Z
@@ -902,7 +902,7 @@ kubectl delete pod -l app=console -n minio-operator
 
 **Причина**: Образ MinIO требует CPU с поддержкой x86-64-v2.
 
-**Решение**: Используйте более старую версию MinIO в `tenant/tenant.yaml`:
+**Решение**: Укажите совместимый образ в `helm/custom-values/lab-home-tenant.yaml` (`tenant.image`):
 ```yaml
 image: minio/minio:RELEASE.2023-09-04T19-57-37Z  # Совместима со старыми CPU
 ```

@@ -1,0 +1,47 @@
+---
+# ArgoCD Application для MinIO Tenant (Helm)
+# Синхронизируется после minio-operator (sync-wave 1)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: minio-tenant
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/mistermedved01/lab-home.git
+    path: 03-argocd/minio/helm/charts/minio-tenant-0.1.0
+    targetRevision: main
+    helm:
+      releaseName: minio-tenant
+      valueFiles:
+        - ../../custom-values/lab-home-tenant.yaml
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: minio-operator
+
+  ignoreDifferences:
+    - group: ""
+      kind: Service
+      jsonPointers:
+        - /status/loadBalancer
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
