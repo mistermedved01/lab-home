@@ -1,0 +1,26 @@
+---
+# Certificate для GitLab TEST (gitlab-test.lab-home.com)
+# Применить после развёртывания приложения gitlab-test.
+#
+# Применение:
+#   kubectl apply -f 03-argocd/gitlab/certificate-gitlab-test.yaml
+#
+# Если cert-manager уже создал Certificate с другими параметрами:
+#   kubectl delete certificate gitlab-wildcard-tls -n gitlab-test
+#   kubectl apply -f 03-argocd/gitlab/certificate-gitlab-test.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: gitlab-wildcard-tls
+  namespace: gitlab-test
+spec:
+  secretName: gitlab-wildcard-tls
+  issuerRef:
+    name: selfsigned-issuer
+    kind: ClusterIssuer
+  dnsNames:
+    - gitlab-test.lab-home.com
+  # Настройки приватного ключа
+  privateKey:
+    # Разрешить cert-manager пересоздавать ключ при несоответствии
+    rotationPolicy: Always
