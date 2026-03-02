@@ -111,11 +111,9 @@ gitlab:
       cron:
         enabled: true
         schedule: "0 2 * * *"   # каждый день в 02:00
-        # Вариант A: PVC — persistence.enabled: true + size, storageClass, useGenericEphemeralVolume: false.
-        # Вариант B: emptyDir — persistence.enabled: false (PVC не создаётся, том на ноде на время Job).
         persistence:
-          enabled: false   # true = PVC, false = emptyDir
-          size: 10Gi
+          enabled: true
+          size: 2Gi
           storageClass: local-path
           useGenericEphemeralVolume: false
       objectStorage:
