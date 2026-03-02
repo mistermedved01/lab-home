@@ -111,10 +111,13 @@ gitlab:
       cron:
         enabled: true
         schedule: "0 2 * * *"   # каждый день в 02:00
+        # Вариант A: PVC (надёжно, свой лимит размера).
+        # Вариант B — emptyDir (без PVC/provisioner): поставить persistence.enabled: false и убрать size/storageClass/useGenericEphemeralVolume.
         persistence:
           enabled: true
           size: 10Gi
           storageClass: local-path
+          useGenericEphemeralVolume: false
       objectStorage:
         backend: s3
         config:
