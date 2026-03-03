@@ -111,6 +111,10 @@ gitlab:
       cron:
         enabled: true
         schedule: "0 2 * * *"   # каждый день в 02:00
+        successfulJobsHistoryLimit: 5   # хранить поды последних 5 успешных запусков
+        failedJobsHistoryLimit: 3
+        backoffLimit: 2   # макс. 2 повтора (всего 3 попытки), затем Job Failed
+        restartPolicy: Never   # при Never каждый retry — новый под, при Failed все поды остаются и логи доступны; при OnFailure последний под удаляется
         persistence:
           enabled: true
           size: 2Gi
