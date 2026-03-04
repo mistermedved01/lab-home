@@ -56,17 +56,18 @@ variable "ssh_public_key" {
 }
 
 variable "vm_list" {
-  description = "Список VM для создания. Для каждой VM укажите proxmox_node — ключ из proxmox_nodes, на каком узле создавать VM."
+  description = "Список VM для создания. Для каждой VM укажите proxmox_node — ключ из proxmox_nodes. vm_disk_size_extra — размер одного доп. диска в ГБ (20); 0 или не указывать — без доп. диска."
   type = map(object({
-    vm_hostname : string
-    vm_ip : string
-    vm_id : number
-    vm_cores : number
-    vm_memory : number
-    vm_disk_size : number
-    cloud_init_file = string
-    role            = string
-    proxmox_node    = string
+    vm_hostname        = string
+    vm_ip              = string
+    vm_id              = number
+    vm_cores           = number
+    vm_memory          = number
+    vm_disk_size       = number
+    cloud_init_file    = string
+    role               = string
+    proxmox_node       = string
+    vm_disk_size_extra = optional(number, 0) # размер доп. диска в ГБ (20); 0 — без доп. диска
   }))
 
   validation {
@@ -121,6 +122,13 @@ variable "vm_list" {
       for k, v in var.vm_list : length(v.cloud_init_file) > 0
     ])
     error_message = "cloud_init_file не может быть пустым"
+  }
+
+  validation {
+    condition = alltrue([
+      for k, v in var.vm_list : v.vm_disk_size_extra >= 0 && v.vm_disk_size_extra <= 10000
+    ])
+    error_message = "vm_disk_size_extra должен быть от 0 до 10000 ГБ"
   }
 
   validation {
@@ -226,4 +234,10 @@ variable "ansible_version" {
     condition     = length(var.ansible_version) > 0
     error_message = "ansible_version не может быть пустым"
   }
+}
+
+variable "skip_push_argocd_applications" {
+  description = "Пропустить копирование 03-argocd на control plane (если нода ещё недоступна). После apply можно вручную: bash scripts/push_argocd_applications.sh <ip> ubuntu keys/id_ed25519 ../../../../03-argocd"
+  type        = bool
+  default     = false
 }
