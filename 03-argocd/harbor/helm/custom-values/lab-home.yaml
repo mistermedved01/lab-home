@@ -103,24 +103,25 @@ redis:
         cpu: 200m
         memory: 256Mi
 
+# TopolVM — тома бэкапятся Velero (не hostPath). Имя класса: topolvm-provisioner (или sc-topolvm при custom values).
 persistence:
   enabled: true
   persistentVolumeClaim:
     registry:
-      storageClass: ""
+      storageClass: "topolvm-provisioner"
       size: 5Gi
     jobservice:
       jobLog:
-        storageClass: ""
+        storageClass: "topolvm-provisioner"
         size: 1Gi
     database:
-      storageClass: ""
+      storageClass: "topolvm-provisioner"
       size: 1Gi
     redis:
-      storageClass: ""
+      storageClass: "topolvm-provisioner"
       size: 1Gi
     trivy:
-      storageClass: ""
+      storageClass: "topolvm-provisioner"
       size: 5Gi
 
 metrics:
