@@ -77,6 +77,19 @@ resource "proxmox_virtual_environment_vm" "vm-cloudinit" {
     file_id      = var.iso_image != null ? var.iso_image : null
   }
 
+  # Доп. диски (scsi1, scsi2, ...) — пустые тома, например под LVM/TopolVM
+  dynamic "disk" {
+    for_each = each.value.vm_disk_size_extra
+    content {
+      datastore_id = var.disk_datastore_id
+      interface    = "scsi${disk.key + 1}"
+      size         = disk.value
+      iothread     = true
+      discard      = "on"
+      file_format  = "raw"
+    }
+  }
+
   # ========================================================================
   # EFI загрузка
   # ========================================================================
