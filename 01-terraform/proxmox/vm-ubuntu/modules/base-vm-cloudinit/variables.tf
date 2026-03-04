@@ -75,13 +75,14 @@ variable "vm_user" {
 variable "vm_list" {
   description = "Список VM для создания"
   type = map(object({
-    vm_hostname : string
-    vm_ip       : string
-    vm_id       : number
-    vm_cores    : number
-    vm_memory   : number
-    vm_disk_size: number
-    cloud_init_file = string
+    vm_hostname      = string
+    vm_ip            = string
+    vm_id            = number
+    vm_cores         = number
+    vm_memory        = number
+    vm_disk_size     = number
+    cloud_init_file  = string
+    vm_disk_size_extra = optional(list(number), [])  # Доп. диски в ГБ (scsi1, scsi2, …). Не указывать или [] — без доп. дисков; не использовать 0.
   }))
 
   validation {
@@ -136,6 +137,15 @@ variable "vm_list" {
       for k, v in var.vm_list : length(v.cloud_init_file) > 0
     ])
     error_message = "cloud_init_file не может быть пустым"
+  }
+
+  validation {
+    condition = alltrue([
+      for k, v in var.vm_list : alltrue([
+        for sz in coalesce(v.vm_disk_size_extra, []) : sz > 0 && sz <= 10000
+      ])
+    ])
+    error_message = "Каждый размер в vm_disk_size_extra должен быть от 1 до 10000 ГБ"
   }
 }
 
