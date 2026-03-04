@@ -8,13 +8,14 @@
 locals {
   vm_list_for_module = {
     for k, v in var.vm_list : k => {
-      vm_hostname     = v.vm_hostname
-      vm_ip           = v.vm_ip
-      vm_id           = v.vm_id
-      vm_cores        = v.vm_cores
-      vm_memory       = v.vm_memory
-      vm_disk_size    = v.vm_disk_size
-      cloud_init_file = v.cloud_init_file
+      vm_hostname        = v.vm_hostname
+      vm_ip              = v.vm_ip
+      vm_id              = v.vm_id
+      vm_cores           = v.vm_cores
+      vm_memory          = v.vm_memory
+      vm_disk_size       = v.vm_disk_size
+      cloud_init_file    = v.cloud_init_file
+      vm_disk_size_extra = try(v.vm_disk_size_extra, 0) > 0 ? [v.vm_disk_size_extra] : []
     }
   }
   vm_list_pve01 = { for k, v in local.vm_list_for_module : k => v if var.vm_list[k].proxmox_node == "pve-node-01" }
@@ -178,6 +179,8 @@ resource "null_resource" "push_ansible_files" {
 # Копирование ArgoCD Applications на Control Plane ноду
 # ============================================================================
 resource "null_resource" "push_argocd_applications" {
+  count = var.skip_push_argocd_applications ? 0 : 1
+
   depends_on = [module.vm_cloudinit_pve_node_01, module.vm_cloudinit_pve_node_02, module.vm_cloudinit_pve_node_03]
 
   triggers = {
@@ -193,7 +196,7 @@ resource "null_resource" "push_argocd_applications" {
         "${local.k8s_control_plane_ip}" \
         "${local.ansible_ssh_user}" \
         "${local.ssh_key_full_path}" \
-        "${abspath("${path.root}/../../../../03-argocd")}"
+        "${path.root}/../../../../03-argocd"
     EOT
 
     interpreter = ["bash", "-c"]
