@@ -48,9 +48,13 @@ error_exit() {
   exit 1
 }
 
-# SSH/SCP команды с общими опциями
+# Путь к ключу после нормализации (заполняется в check_params)
+SSH_KEY_PATH_RESOLVED=""
+
+# SSH/SCP команды с общими опциями (используют нормализованный путь к ключу)
 ssh_cmd() {
-  ssh -i "$SSH_KEY_PATH" \
+  local key_path="${SSH_KEY_PATH_RESOLVED:-$SSH_KEY_PATH}"
+  ssh -i "$key_path" \
       -o StrictHostKeyChecking=no \
       -o UserKnownHostsFile=/dev/null \
       -o ConnectTimeout=10 \
@@ -58,7 +62,8 @@ ssh_cmd() {
 }
 
 scp_cmd() {
-  scp -i "$SSH_KEY_PATH" \
+  local key_path="${SSH_KEY_PATH_RESOLVED:-$SSH_KEY_PATH}"
+  scp -i "$key_path" \
       -o StrictHostKeyChecking=no \
       -o UserKnownHostsFile=/dev/null \
       -o ConnectTimeout=10 \
@@ -70,6 +75,14 @@ normalize_path() {
   local path="$1"
   local script_dir
   local resolved_path
+  
+  # Преобразование Windows-пути (C:/ или C:\) в формат для bash (Git Bash / MSYS: /c/)
+  if [[ "$path" =~ ^[A-Za-z]:[/\\] ]]; then
+    local drive="${path:0:1}"
+    drive=$(echo "$drive" | tr '[:upper:]' '[:lower:]')
+    path="/${drive}/${path:3}"
+    path="${path//\\/\/}"
+  fi
   
   # Убираем ./ в начале пути
   path=$(echo "$path" | sed 's|^\./||')
@@ -121,6 +134,33 @@ normalize_path() {
   echo ""
 }
 
+# Нормализация пути к файлу (в т.ч. Windows → /c/... для bash)
+normalize_file_path() {
+  local path="$1"
+  local script_dir dir_abs
+  # Преобразование Windows-пути (C:/ или C:\) в формат для bash (Git Bash / MSYS: /c/)
+  if [[ "$path" =~ ^[A-Za-z]:[/\\] ]]; then
+    local drive="${path:0:1}"
+    drive=$(echo "$drive" | tr '[:upper:]' '[:lower:]')
+    path="/${drive}/${path:3}"
+    path="${path//\\/\/}"
+  fi
+  path=$(echo "$path" | sed 's|^\./||')
+  if [[ -f "$path" ]]; then
+    dir_abs="$(cd "$(dirname "$path")" && pwd)"
+    echo "${dir_abs}/$(basename "$path")"
+    return
+  fi
+  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  local try_path="$script_dir/../$path"
+  if [[ -f "$try_path" ]]; then
+    dir_abs="$(cd "$(dirname "$try_path")" && pwd)"
+    echo "${dir_abs}/$(basename "$try_path")"
+    return
+  fi
+  echo ""
+}
+
 # ============================================================================
 # Валидация параметров
 # ============================================================================
@@ -137,8 +177,21 @@ check_params() {
     error_exit "Не указаны обязательные параметры: ${missing_params[*]}"
   fi
   
-  if [[ ! -f "$SSH_KEY_PATH" ]]; then
+  # Нормализуем путь к ключу (Terraform на Windows передаёт путь в формате C:/...)
+  if [[ -f "$SSH_KEY_PATH" ]]; then
+    SSH_KEY_PATH_RESOLVED="$(cd "$(dirname "$SSH_KEY_PATH")" && pwd)/$(basename "$SSH_KEY_PATH")"
+  else
+    SSH_KEY_PATH_RESOLVED=$(normalize_file_path "$SSH_KEY_PATH")
+  fi
+  if [[ -z "$SSH_KEY_PATH_RESOLVED" ]] || [[ ! -f "$SSH_KEY_PATH_RESOLVED" ]]; then
     error_exit "SSH ключ не найден: $SSH_KEY_PATH"
+  fi
+  # Приводим Windows-путь к виду /c/... для ssh в bash (на случай если pwd вернул C:/...)
+  if [[ "$SSH_KEY_PATH_RESOLVED" =~ ^[A-Za-z]: ]]; then
+    local drive="${SSH_KEY_PATH_RESOLVED:0:1}"
+    drive=$(echo "$drive" | tr '[:upper:]' '[:lower:]')
+    SSH_KEY_PATH_RESOLVED="/${drive}/${SSH_KEY_PATH_RESOLVED:3}"
+    SSH_KEY_PATH_RESOLVED="${SSH_KEY_PATH_RESOLVED//\\/\/}"
   fi
   
   # Нормализуем путь к Applications
