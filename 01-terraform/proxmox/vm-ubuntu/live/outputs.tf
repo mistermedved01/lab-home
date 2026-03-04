@@ -11,27 +11,11 @@ output "vms" {
 }
 
 # ----------------------------------------------------------------------------
-# VM по hostname
+# VM по hostname (полные параметры: cores, memory, disk, ipv4, node)
 # ----------------------------------------------------------------------------
 output "vms_by_hostname" {
   description = "Map VM по hostname для удобного поиска"
   value       = local.merged_vms_by_hostname
-}
-
-# ----------------------------------------------------------------------------
-# Список всех IP адресов
-# ----------------------------------------------------------------------------
-output "vm_ips" {
-  description = "Список всех IP адресов созданных VM"
-  value       = concat(module.vm_cloudinit_pve_node_01.vm_ips, module.vm_cloudinit_pve_node_02.vm_ips, module.vm_cloudinit_pve_node_03.vm_ips)
-}
-
-# ----------------------------------------------------------------------------
-# Map IP адресов к hostname
-# ----------------------------------------------------------------------------
-output "vm_ips_map" {
-  description = "Map IP адресов к hostname VM"
-  value       = merge(module.vm_cloudinit_pve_node_01.vm_ips_map, module.vm_cloudinit_pve_node_02.vm_ips_map, module.vm_cloudinit_pve_node_03.vm_ips_map)
 }
 
 # ----------------------------------------------------------------------------
