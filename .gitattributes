@@ -1,4 +1,5 @@
-# Force LF for shell scripts and Terraform to avoid CRLF issues in WSL/bash
+# В репозитории везде LF, без CRLF (Windows)
+*       text=auto eol=lf
 *.sh    text eol=lf
 *.tf    text eol=lf
 *.tfvars text eol=lf

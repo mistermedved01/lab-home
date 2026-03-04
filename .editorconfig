@@ -1,0 +1,18 @@
+# https://editorconfig.org — единые настройки для редакторов
+# В репозитории везде LF (без CRLF)
+
+root = true
+
+[*]
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+[*.{sh,bash}]
+indent_style = space
+indent_size = 2
+
+[*.{tf,tfvars,tftpl,yaml,yml,json,md}]
+indent_style = space
+indent_size = 2
