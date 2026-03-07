@@ -107,7 +107,8 @@ graph TB
 
 ```
 harbor/
-├── application.yaml              # Application
+├── application.yaml              # Application (prod)
+├── application-test.yaml         # Application для тестового инстанса (namespace harbor-test)
 ├── helm/
 │   ├── charts/
 │   │   └── harbor-1.18.0/        # Распакованный чарт Harbor 1.18.0
@@ -115,7 +116,7 @@ harbor/
 │   │       ├── values.yaml
 │   │       └── templates/
 │   └── custom-values/
-│       └── lab-home.yaml          # переопределение для lab-home (valueFiles: ../../custom-values/lab-home.yaml)
+│       └── lab-home.yaml         # переопределение для prod
 └── README.md
 ```
 
@@ -363,39 +364,6 @@ persistence:
 
 Размеры по умолчанию: registry 5Gi, jobservice 1Gi, database 1Gi, redis 1Gi, trivy 5Gi.
 
-### Изменение домена (externalURL)
-
-В `helm/custom-values/lab-home.yaml` измените:
-
-```yaml
-externalURL: https://ваш-домен.lab-home.com
-expose:
-  ingress:
-    hosts:
-      core: ваш-домен.lab-home.com
-```
-
-И аннотации/secretName для TLS при необходимости. Затем синхронизируйте Application в ArgoCD.
-
-### Источник чарта (Git vs Helm repo)
-
-Текущая конфигурация использует **распакованный чарт** из Git: `path: 03-argocd/harbor/helm/charts/harbor-1.18.0`, values в `helm/custom-values/lab-home.yaml` (в Application задано `valueFiles: ../../custom-values/lab-home.yaml`). Чарт взят с [helm.goharbor.io](https://helm.goharbor.io) (harbor 1.18.0), распакован локально, чтобы не зависеть от доступа к Helm repo из кластера.
-
-Чтобы переключиться на **Helm repo**, в `application.yaml` укажите:
-
-```yaml
-source:
-  repoURL: https://helm.goharbor.io
-  chart: harbor
-  targetRevision: "1.18.0"
-  path: ""   # не использовать
-# и задайте helm.valueFiles на нужные values (если храните в репо)
-```
-
-### Обновление версии чарта
-
-При использовании распакованного чарта: скачайте новую версию (`helm pull harbor --repo https://helm.goharbor.io --version <версия> --untar`), распакуйте в `helm/charts/harbor-<версия>`, обновите `path` в `application.yaml` на `03-argocd/harbor/helm/charts/harbor-<версия>`. Файл `helm/custom-values/lab-home.yaml` менять не нужно.
-
 </details>
 
 <details>
@@ -506,7 +474,7 @@ cert-manager.io/cluster-issuer: "letsencrypt-prod"
 1. Задайте пароль администратора через Secret (`existingSecretAdminPassword`), не храните пароль в Git.
 2. Укажите явный StorageClass и при необходимости увеличьте размер PVC для registry.
 3. Используйте Let's Encrypt вместо self-signed сертификатов.
-4. Настройте резервное копирование данных PostgreSQL и PVC registry.
+4. Настройте резервное копирование — см. **[docs/BACKUPS.md](docs/BACKUPS.md)** (Velero или ручной бэкап БД и PVC registry).
 5. Ограничьте доступ к Harbor по сети (firewall, VPN) и используйте сильные пароли.
 
 </details>
