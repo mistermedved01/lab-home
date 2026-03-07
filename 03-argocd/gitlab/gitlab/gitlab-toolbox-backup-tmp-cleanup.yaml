@@ -1,0 +1,52 @@
+# Очистка временного PVC после бэкапа GitLab
+# PVC: gitlab-toolbox-backup-tmp, монтируется в /srv/gitlab/tmp в CronJob бэкапа
+#
+# Применить: kubectl apply -f gitlab-toolbox-backup-tmp-cleanup.yaml -n gitlab
+# Разовый запуск: через UI (ArgoCD/Kubernetes) — "Run" по CronJob или:
+# kubectl create job gitlab-toolbox-backup-tmp-cleanup-manual --from=cronjob/gitlab-toolbox-backup-tmp-cleanup -n gitlab
+#
+# Важно: PVC RWO — пока под бэкапа держит том, под очистки будет в Pending.
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: gitlab-toolbox-backup-tmp-cleanup
+  namespace: gitlab
+  labels:
+    app: toolbox
+    app.cpaas.io/name: gitlab-toolbox-backup-tmp-cleanup
+spec:
+  schedule: "0 15 * * *"
+  timeZone: Etc/UTC
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: 86400
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app: toolbox
+            cronjob.cpaas.io/name: gitlab-toolbox-backup-tmp-cleanup
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: cleanup
+              image: busybox:latest
+              command:
+                - sh
+                - -c
+                - |
+                  echo "Before: $(df -h /srv/gitlab/tmp | tail -1)"
+                  rm -rf /srv/gitlab/tmp/*
+                  echo "Done"
+                  echo "After:  $(df -h /srv/gitlab/tmp | tail -1)"
+              volumeMounts:
+                - name: tmp
+                  mountPath: /srv/gitlab/tmp
+          volumes:
+            - name: tmp
+              persistentVolumeClaim:
+                claimName: gitlab-toolbox-backup-tmp

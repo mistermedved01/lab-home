@@ -1,3 +1,0 @@
-.gitignore
-gitlab/gitlab-backup-s3-secret.yaml
-gitlab-test/gitlab-backup-s3-secret.yaml
