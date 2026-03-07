@@ -141,30 +141,28 @@ graph TB
 
 ---
 
-Структура: чарт в Git, values в `helm/custom-values/`. Прод и тест — отдельные папки.
+Структура: чарт в Git, values в `helm/custom-values/`. Прод (lab-home) и тест — в подкаталогах.
 
 ```
 03-argocd/gitlab/
-├── gitlab/                        # Прод (namespace gitlab)
-│   ├── application.yaml           # ArgoCD Application
-│   ├── certificate.yaml           # Certificate для TLS (опционально)
-│   ├── gitlab-backup-s3-secret.example.yaml   # Пример Secret (без ключей)
-│   └── gitlab-backup-s3-secret.yaml   # Secret бэкапов (в .gitignore)
+├── gitlab/                        # Прод lab-home (namespace gitlab)
+│   ├── application.yaml
+│   ├── certificate.yaml
+│   ├── gitlab-backup-s3-secret.example.yaml
+│   ├── gitlab-backup-s3-secret.yaml        # в .gitignore
+│   └── gitlab-toolbox-backup-tmp-cleanup.yaml   # CronJob очистки PVC /srv/gitlab/tmp
 ├── gitlab-test/                   # Тест восстановления (namespace gitlab-test)
-│   ├── application.yaml           # ArgoCD Application
-│   ├── certificate.yaml           # Certificate для gitlab-test.lab-home.com
-│   ├── gitlab-backup-s3-secret.example.yaml   # Пример Secret для restore
-│   └── gitlab-backup-s3-secret.yaml   # Secret для restore (в .gitignore)
-├── docs/
-│   ├── BACKUPS.md                 # Подробно: бэкапы и восстановление
-│   └── README-gitlab-test.md      # Развёртывание и тестовый restore
-├── README.md                      # Документация (этот файл)
+│   ├── application.yaml
+│   ├── certificate.yaml
+│   ├── gitlab-backup-s3-secret.example.yaml
+│   └── gitlab-backup-s3-secret.yaml         # в .gitignore
+├── README.md                      # этот файл
 └── helm/
     ├── custom-values/
-    │   ├── lab-home.yaml          # Values для прода
-    │   └── lab-home-test.yaml     # Values для gitlab-test
+    │   ├── lab-home.yaml
+    │   └── lab-home-test.yaml
     └── charts/
-        └── gitlab-9.7.1/          # Чарт GitLab 9.7.1
+        └── gitlab-9.7.1/
 ```
 
 **Примечание**: Namespace `gitlab` создаётся автоматически через `CreateNamespace=true`.
@@ -298,19 +296,6 @@ kubectl get certificate gitlab-wildcard-tls -n gitlab
 ```
 
 ### 6. Проверка статуса развертывания
-
-#### Через ArgoCD CLI
-
-```bash
-# Список Applications
-argocd app list
-
-# Статус GitLab Application
-argocd app get gitlab
-
-# Синхронизация (если не настроена автоматическая)
-argocd app sync gitlab
-```
 
 #### Через ArgoCD UI
 
@@ -865,6 +850,12 @@ kubectl get certificate gitlab-wildcard-tls -n gitlab
    kubectl get cronjob -n gitlab
    kubectl get jobs -n gitlab
    ```
+
+Подробная инструкция: MinIO, Secret, ручной запуск, восстановление в gitlab-test — см. документацию по бэкапам в репозитории.
+
+**Очистка после бэкапа:**
+- **Временный PVC** (`gitlab-toolbox-backup-tmp`): CronJob `gitlab-toolbox-backup-tmp-cleanup` — манифест `gitlab/gitlab-toolbox-backup-tmp-cleanup.yaml`. Расписание, например, 15:00 UTC.
+- **Старые архивы в S3**: `backup-utility --cleanup` по retention (отдельный CronJob при необходимости).
 
 **Дополнительно (внешние инструменты):**
 - **Velero** — бэкап ресурсов Kubernetes и PersistentVolumes
