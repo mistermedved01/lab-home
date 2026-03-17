@@ -30,9 +30,3 @@ ingress:
   ingressClassName: nginx
   annotations: {}
   tlsSecret: minio-tenant-console-tls
-  # S3 API (для mc и прочих клиентов снаружи кластера) — отдельный хост, бэкенд minio-tenant-hl:9000
-  api:
-    enabled: false
-    host: s3.lab-home.com
-    ingressClassName: nginx
-    tlsSecret: minio-tenant-api-tls
