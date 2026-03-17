@@ -29,3 +29,9 @@ ingress:
   host: minio.lab-home.com
   ingressClassName: nginx
   tlsSecret: minio-tenant-console-tls
+  # S3 API — для mc и прочих клиентов снаружи кластера
+  api:
+    enabled: true
+    host: s3.lab-home.com
+    ingressClassName: nginx
+    tlsSecret: minio-tenant-api-tls
