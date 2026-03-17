@@ -33,7 +33,5 @@ ingress:
   api:
     enabled: true
     host: s3.lab-home.com
-    # Доступ по NodePort 30443: запросы с Host s3.lab-home.com:30443 матчатся этим правилом
-    hostWithPort: "s3.lab-home.com:30443"
     ingressClassName: nginx
     tlsSecret: minio-tenant-api-tls

@@ -22,9 +22,6 @@ spec:
   tls:
     - hosts:
         - {{ .Values.ingress.api.host }}
-        {{- if .Values.ingress.api.hostWithPort }}
-        - {{ .Values.ingress.api.hostWithPort }}
-        {{- end }}
       secretName: {{ .Values.ingress.api.tlsSecret }}
   rules:
     - host: {{ .Values.ingress.api.host }}
@@ -37,16 +34,4 @@ spec:
                 name: {{ .Values.tenant.name }}-hl
                 port:
                   number: 9000
-    {{- if .Values.ingress.api.hostWithPort }}
-    - host: {{ .Values.ingress.api.hostWithPort }}
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: {{ .Values.tenant.name }}-hl
-                port:
-                  number: 9000
-    {{- end }}
 {{- end }}
