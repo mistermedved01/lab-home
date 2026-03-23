@@ -108,19 +108,24 @@ persistence:
   enabled: true
   persistentVolumeClaim:
     registry:
+      existingClaim: harbor-registry-migr
       storageClass: "topolvm-provisioner"
       size: 5Gi
     jobservice:
       jobLog:
+        existingClaim: harbor-jobservice-migr
         storageClass: "topolvm-provisioner"
         size: 1Gi
     database:
+      existingClaim: database-data-harbor-database-0-migr
       storageClass: "topolvm-provisioner"
       size: 1Gi
     redis:
+      existingClaim: data-harbor-redis-0-migr
       storageClass: "topolvm-provisioner"
       size: 1Gi
     trivy:
+      existingClaim: data-harbor-trivy-0-migr
       storageClass: "topolvm-provisioner"
       size: 5Gi
 
