@@ -48,6 +48,19 @@ configuration:
       credential:
         name: velero-cloud-credentials
         key: cloud
+    # Бакет для restore в dev (локация dev, бакет data-backup-dev)
+    - name: dev
+      provider: aws
+      bucket: data-backup-dev
+      default: false
+      config:
+        region: minio
+        s3Url: https://minio-tenant-hl.minio-operator.svc.cluster.local:9000
+        s3ForcePathStyle: "true"
+        insecureSkipTLSVerify: "true"
+      credential:
+        name: velero-cloud-credentials
+        key: cloud
   volumeSnapshotLocation: []
   defaultVolumesToFsBackup: true
 
