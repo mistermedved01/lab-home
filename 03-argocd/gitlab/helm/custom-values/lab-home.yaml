@@ -84,7 +84,7 @@ gitlab:
   gitaly:
     replicas: 1
     persistence:
-      storageClass: local-path
+      storageClass: topolvm-provisioner
     resources:
       requests:
         cpu: 100m
@@ -118,7 +118,7 @@ gitlab:
         persistence:
           enabled: true
           size: 2Gi
-          storageClass: local-path
+          storageClass: topolvm-provisioner
           useGenericEphemeralVolume: false
       objectStorage:
         backend: s3
@@ -131,7 +131,7 @@ postgresql:
   persistence:
     enabled: true
     size: 10Gi
-    storageClass: local-path
+    storageClass: topolvm-provisioner
   auth:
     username: gitlab
     password: "gitlab123"
@@ -151,7 +151,7 @@ redis:
     persistence:
       enabled: true
       size: 2Gi
-      storageClass: local-path
+      storageClass: topolvm-provisioner
     resources:
       requests:
         cpu: 100m
