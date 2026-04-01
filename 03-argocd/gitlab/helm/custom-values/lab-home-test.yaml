@@ -114,14 +114,14 @@ gitlab:
 
 # === БАЗЫ ===
 postgresql:
-  persistence:
-    enabled: true
-    size: 10Gi
-    storageClass: topolvm-provisioner
   auth:
     username: gitlab
     password: "gitlab123"
   primary:
+    persistence:
+      enabled: true
+      size: 10Gi
+      storageClass: topolvm-provisioner
     resources:
       requests:
         cpu: 250m
