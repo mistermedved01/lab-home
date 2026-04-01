@@ -16,7 +16,7 @@ spec:
     path: 03-argocd/gitlab/helm/charts/gitlab-9.7.1
     targetRevision: main
     helm:
-      releaseName: gitlab-test
+      releaseName: gitlab
       valueFiles:
         - ../../custom-values/lab-home-test.yaml
 
