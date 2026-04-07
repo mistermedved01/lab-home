@@ -1,0 +1,35 @@
+# Nexus Repository Manager — values для окружения lab-home
+# Чарт: helm/charts/nexus-repository-manager-64.2.0
+
+fullnameOverride: nexus
+
+# Ingress с TLS (cert-manager)
+ingress:
+  enabled: true
+  ingressClassName: nginx
+  hostPath: /
+  hostRepo: nexus.lab-home.com
+  annotations:
+    cert-manager.io/cluster-issuer: "selfsigned-issuer"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+  tls:
+    - secretName: nexus-tls
+      hosts:
+        - nexus.lab-home.com
+
+# PVC для данных
+persistence:
+  enabled: true
+  storageSize: 10Gi
+  # storageClass: ""   # раскомментировать для default StorageClass
+
+# Ресурсы контейнера Nexus
+nexus:
+  resources:
+    requests:
+      cpu: 250m
+      memory: 1Gi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
