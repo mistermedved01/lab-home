@@ -7,15 +7,14 @@ ingress:
   enabled: true
   ingressClassName: nginx
   annotations:
-    cert-manager.io/cluster-issuer: "selfsigned-issuer"
+    # cert-manager: чарт сам добавит cert-manager.io/issuer → Issuer «rancher» в cattle-system
+    # CA из секрета tls-rancher. ClusterIssuer selfsigned-issuer сюда не подмешиваем — будет конфликт по смыслу.
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-    kubernetes.io/ingress.class: nginx
   tls:
-    enabled: true
-    source: secret
-    secretName: rancher-tls
+    # rancher: серт для Ingress выпускает cert-manager от CA Rancher (tls-rancher); секрет по умолчанию tls-rancher-ingress
+    source: rancher
 
 # Используем внешний cert-manager (не встроенный в чарт)
 certmanager:
