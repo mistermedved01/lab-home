@@ -1,0 +1,7 @@
+# TopolVM values для lab-home: один device class (vg_ssd1), резерв 2 GiB на ноду
+lvmd:
+  deviceClasses:
+    - name: default
+      volume-group: vg_ssd1
+      default: true
+      spare-gb: 2

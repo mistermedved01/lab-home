@@ -1,0 +1,21 @@
+annotations:
+  artifacthub.io/images: |
+    - name: topolvm-with-sidecar
+      image: ghcr.io/topolvm/topolvm-with-sidecar:0.40.2
+    - name: topolvm-with
+      image: ghcr.io/topolvm/topolvm:0.40.2
+  artifacthub.io/license: Apache-2.0
+apiVersion: v2
+appVersion: 0.40.2
+dependencies:
+- condition: cert-manager.enabled
+  name: cert-manager
+  repository: https://charts.jetstack.io
+  version: ~1.17.x
+description: Topolvm
+home: https://github.com/topolvm/topolvm
+name: topolvm
+sources:
+- https://github.com/topolvm/topolvm
+type: application
+version: 16.0.1
