@@ -1,22 +1,28 @@
 # Rancher values для окружения lab-home (чарт helm/charts/rancher-2.13.0)
+#
+# Паттерн как у Harbor/Nexus: TLS на Ingress, cert-manager (ClusterIssuer selfsigned-issuer).
+# Порт 30443 задаётся у ingress-nginx (NodePort), в values не дублируем.
+#
+# CATTLE_SERVER_URL — канонический адрес для UI и команд регистрации кластеров (с портом, если снаружи только NodePort).
+# ingress.tls.source: secret + extraAnnotations cluster-issuer — выпуск Secret rancher-tls делает cert-manager.
 
 hostname: rancher.lab-home.com
 replicas: 1
 
+tls: ingress
+
 ingress:
   enabled: true
   ingressClassName: nginx
-  annotations:
-    # cert-manager: чарт сам добавит cert-manager.io/issuer → Issuer «rancher» в cattle-system
-    # CA из секрета tls-rancher. ClusterIssuer selfsigned-issuer сюда не подмешиваем — будет конфликт по смыслу.
+  tls:
+    source: secret
+    secretName: rancher-tls
+  extraAnnotations:
+    cert-manager.io/cluster-issuer: "selfsigned-issuer"
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
-    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-  tls:
-    # rancher: серт для Ingress выпускает cert-manager от CA Rancher (tls-rancher); секрет по умолчанию tls-rancher-ingress
-    source: rancher
 
-# Используем внешний cert-manager (не встроенный в чарт)
+# Чарт Rancher не ставит cert-manager — кластерный экземпляр из 03-argocd/cert-manager
 certmanager:
   enabled: false
 certManager:
@@ -34,10 +40,9 @@ resources:
 
 useBundledSystemChart: true
 
-# HTTPS и FQDN
 extraEnv:
   - name: CATTLE_SERVER_URL
-    value: https://rancher.lab-home.com
+    value: https://rancher.lab-home.com:30443
 
 global:
   cattle:
