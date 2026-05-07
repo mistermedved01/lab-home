@@ -110,7 +110,7 @@ persistence:
     registry:
       existingClaim: harbor-registry-migr2-back01
       storageClass: "topolvm-provisioner"
-      size: 5Gi
+      size: 10Gi
     jobservice:
       jobLog:
         existingClaim: harbor-jobservice-migr2-back01
