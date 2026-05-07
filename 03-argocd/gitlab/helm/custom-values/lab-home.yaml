@@ -85,6 +85,7 @@ gitlab:
     replicas: 1
     persistence:
       storageClass: topolvm-provisioner
+      size: 5Gi
     resources:
       requests:
         cpu: 100m
