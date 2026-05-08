@@ -1,6 +1,6 @@
 # Rancher values для окружения lab-home (чарт helm/charts/rancher-2.13.0)
 #
-# Паттерн как у Harbor/Nexus: TLS на Ingress, cert-manager (ClusterIssuer selfsigned-issuer).
+# Паттерн как у Harbor/Nexus: TLS на Ingress, cert-manager (ClusterIssuer lab-home-ca-issuer).
 # Порт 30443 задаётся у ingress-nginx (NodePort), в values не дублируем.
 #
 # CATTLE_SERVER_URL — канонический адрес для UI и команд регистрации кластеров (с портом, если снаружи только NodePort).
@@ -18,7 +18,7 @@ ingress:
     source: secret
     secretName: rancher-tls
   extraAnnotations:
-    cert-manager.io/cluster-issuer: "selfsigned-issuer"
+    cert-manager.io/cluster-issuer: "lab-home-ca-issuer"
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
 
