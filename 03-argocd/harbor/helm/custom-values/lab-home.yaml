@@ -14,7 +14,7 @@ expose:
       core: harbor.lab-home.com
     className: nginx
     annotations:
-      cert-manager.io/cluster-issuer: "selfsigned-issuer"
+      cert-manager.io/cluster-issuer: "lab-home-ca-issuer"
       nginx.ingress.kubernetes.io/ssl-redirect: "true"
       nginx.ingress.kubernetes.io/proxy-body-size: "0"
       nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
