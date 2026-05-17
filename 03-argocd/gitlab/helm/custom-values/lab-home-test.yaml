@@ -1,7 +1,6 @@
-# GitLab TEST — для проверки восстановления из бэкапа
-# namespace: gitlab-test, host: gitlab-test.lab-home.com
+# GitLab TEST — отдельный инстанс (namespace gitlab-test, host gitlab-test.lab-home.com)
+# Для проверки restore: backups.bucket указывает на бакет prod (gitlab-lab-home-backups).
 
-# === ОСНОВНЫЕ НАСТРОЙКИ ===
 installCertmanager: false
 upgradeCheck:
   enabled: false
@@ -14,7 +13,6 @@ registry:
 gitlab-runner:
   install: false
 
-# === GLOBAL ===
 global:
   hosts:
     domain: lab-home.com
@@ -25,31 +23,69 @@ global:
     configureCertmanager: false
     class: nginx
     annotations:
-      cert-manager.io/cluster-issuer: "selfsigned-issuer"
+      cert-manager.io/cluster-issuer: "lab-home-ca-issuer"
       nginx.ingress.kubernetes.io/ssl-redirect: "true"
     tls:
       enabled: true
   kas:
     enabled: false
   appConfig:
-    artifacts:
-      enabled: false
+    object_store:
+      enabled: true
+      proxy_download: true
+      connection:
+        secret: gitlab-s3-cfg
+        key: connection
+      createBucketsJob:
+        enabled: false
     lfs:
-      enabled: false
+      enabled: true
+      proxy_download: true
+      bucket: gitlab-test-lab-home-lfs
+      connection: {}
+    artifacts:
+      enabled: true
+      proxy_download: true
+      bucket: gitlab-test-lab-home-artifacts
+      connection: {}
     uploads:
-      enabled: false
+      enabled: true
+      proxy_download: true
+      bucket: gitlab-test-lab-home-uploads
+      connection: {}
     packages:
-      enabled: false
+      enabled: true
+      proxy_download: true
+      bucket: gitlab-test-lab-home-packages
+      connection: {}
+    externalDiffs:
+      enabled: true
+      when: outdated
+      proxy_download: true
+      bucket: gitlab-test-lab-home-mr-diffs
+      connection: {}
+    terraformState:
+      enabled: true
+      bucket: gitlab-test-lab-home-terraform-state
+      connection: {}
+    ciSecureFiles:
+      enabled: true
+      bucket: gitlab-test-lab-home-ci-secure-files
+      connection: {}
+    dependencyProxy:
+      enabled: true
+      proxy_download: true
+      bucket: gitlab-test-lab-home-dependency-proxy
+      connection: {}
     backups:
-      # Бакет продового GitLab — чтобы при restore читать бэкапы оттуда
-      bucket: gitlab-toolbox-backup
-      tmpBucket: gitlab-toolbox-backup-tmp
+      # Бакет prod — toolbox restore читает архивы оттуда
+      bucket: gitlab-lab-home-backups
+      tmpBucket: gitlab-test-lab-home-backup-tmp
   minio:
     enabled: false
   grafana:
     enabled: false
 
-# === GITLAB ===
 gitlab:
   upgradeCheck:
     enabled: false
@@ -67,7 +103,7 @@ gitlab:
         memory: 2G
       limits:
         cpu: "1"
-        memory: 4G   # было 2.5G — OOMKilled при нагрузке
+        memory: 4G
   sidekiq:
     replicas: 1
     resources:
@@ -81,6 +117,7 @@ gitlab:
     replicas: 1
     persistence:
       storageClass: topolvm-provisioner
+      size: 5Gi
     resources:
       requests:
         cpu: 100m
@@ -105,14 +142,13 @@ gitlab:
     enabled: true
     backups:
       cron:
-        enabled: false   # для теста восстановления кроны не нужны
+        enabled: false
       objectStorage:
         backend: s3
         config:
-          secret: gitlab-backup-s3-config
-          key: config
+          secret: gitlab-s3-cfg
+          key: s3cmd
 
-# === БАЗЫ ===
 postgresql:
   auth:
     username: gitlab
