@@ -91,6 +91,8 @@ gitlab:
     enabled: false
   webservice:
     replicas: 1
+    minReplicas: 1
+    maxReplicas: 1
     deployment:
       livenessProbe:
         initialDelaySeconds: 200
@@ -106,6 +108,8 @@ gitlab:
         memory: 4G
   sidekiq:
     replicas: 1
+    minReplicas: 1
+    maxReplicas: 1
     resources:
       requests:
         cpu: 400m
@@ -127,6 +131,8 @@ gitlab:
         memory: 512Mi
   gitlab-shell:
     replicas: 1
+    minReplicas: 1
+    maxReplicas: 1
     resources:
       requests:
         cpu: 50m
