@@ -17,7 +17,7 @@ tenant:
           cpu: 2000m
           memory: 2Gi
       volumeClaimTemplate:
-        storageClassName: local-path
+        storageClassName: topolvm-provisioner
         size: 10Gi
 
 credentials:
