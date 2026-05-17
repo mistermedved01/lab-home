@@ -36,17 +36,57 @@ global:
     enabled: false
 
   appConfig:
-    artifacts:
-      enabled: false
+    # Object storage в MinIO (как gitlab-c1 prod): Secret gitlab-s3-cfg, ключ connection
+    object_store:
+      enabled: true
+      proxy_download: true
+      connection:
+        secret: gitlab-s3-cfg
+        key: connection
+      createBucketsJob:
+        enabled: false
     lfs:
-      enabled: false
+      enabled: true
+      proxy_download: true
+      bucket: gitlab-lab-home-lfs
+      connection: {}
+    artifacts:
+      enabled: true
+      proxy_download: true
+      bucket: gitlab-lab-home-artifacts
+      connection: {}
     uploads:
-      enabled: false
+      enabled: true
+      proxy_download: true
+      bucket: gitlab-lab-home-uploads
+      connection: {}
     packages:
-      enabled: false
+      enabled: true
+      proxy_download: true
+      bucket: gitlab-lab-home-packages
+      connection: {}
+    externalDiffs:
+      enabled: true
+      when: outdated
+      proxy_download: true
+      bucket: gitlab-lab-home-mr-diffs
+      connection: {}
+    terraformState:
+      enabled: true
+      bucket: gitlab-lab-home-terraform-state
+      connection: {}
+    ciSecureFiles:
+      enabled: true
+      bucket: gitlab-lab-home-ci-secure-files
+      connection: {}
+    dependencyProxy:
+      enabled: true
+      proxy_download: true
+      bucket: gitlab-lab-home-dependency-proxy
+      connection: {}
     backups:
-      bucket: gitlab-toolbox-backup
-      tmpBucket: gitlab-toolbox-backup-tmp
+      bucket: gitlab-lab-home-backups
+      tmpBucket: gitlab-lab-home-backup-tmp
 
   minio:
     enabled: false
@@ -112,10 +152,11 @@ gitlab:
       cron:
         enabled: true
         schedule: "0 2 * * *"   # каждый день в 02:00
-        successfulJobsHistoryLimit: 5   # хранить поды последних 5 успешных запусков
+        extraArgs: --skip artifacts   # артефакты уже в S3-бакете artifacts
+        successfulJobsHistoryLimit: 5
         failedJobsHistoryLimit: 3
-        backoffLimit: 2   # макс. 2 повтора (всего 3 попытки), затем Job Failed
-        restartPolicy: Never   # при Never каждый retry — новый под, при Failed все поды остаются и логи доступны; при OnFailure последний под удаляется
+        backoffLimit: 2
+        restartPolicy: Never
         persistence:
           enabled: true
           size: 2Gi
@@ -124,8 +165,8 @@ gitlab:
       objectStorage:
         backend: s3
         config:
-          secret: gitlab-backup-s3-config
-          key: config
+          secret: gitlab-s3-cfg
+          key: s3cmd
 
 # === БАЗЫ ===
 postgresql:
