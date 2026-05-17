@@ -17,7 +17,7 @@ console:
     enabled: true
     ingressClassName: nginx
     annotations:
-      cert-manager.io/cluster-issuer: "selfsigned-issuer"
+      cert-manager.io/cluster-issuer: "lab-home-ca-issuer"
       nginx.ingress.kubernetes.io/ssl-redirect: "true"
       nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
       nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
@@ -40,5 +40,3 @@ operator:
     limits:
       cpu: 500m
       memory: 256Mi
-
-# MinIO KES (Key Encryption Service) — настраивается на уровне Tenant при необходимости
