@@ -3,7 +3,6 @@
 
 fullnameOverride: nexus
 
-# Ingress с TLS (cert-manager) — как Harbor: ClusterIssuer выпускает Secret nexus-tls
 ingress:
   enabled: true
   ingressClassName: nginx
@@ -18,13 +17,11 @@ ingress:
       hosts:
         - nexus.lab-home.com
 
-# TopolVM — том бэкапится Velero (не hostPath). 20Gi: hosted/proxy-репозитории + кэш образов
 persistence:
   enabled: true
   storageClass: topolvm-provisioner
-  storageSize: 20Gi
+  storageSize: 5Gi
 
-# Ресурсы контейнера Nexus
 nexus:
   resources:
     requests:
