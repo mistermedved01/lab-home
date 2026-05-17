@@ -3,14 +3,14 @@
 
 fullnameOverride: nexus
 
-# Ingress с TLS (cert-manager)
+# Ingress с TLS (cert-manager) — как Harbor: ClusterIssuer выпускает Secret nexus-tls
 ingress:
   enabled: true
   ingressClassName: nginx
   hostPath: /
   hostRepo: nexus.lab-home.com
   annotations:
-    cert-manager.io/cluster-issuer: "selfsigned-issuer"
+    cert-manager.io/cluster-issuer: "lab-home-ca-issuer"
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/proxy-body-size: "0"
   tls:
@@ -18,11 +18,11 @@ ingress:
       hosts:
         - nexus.lab-home.com
 
-# PVC для данных
+# TopolVM — том бэкапится Velero (не hostPath). 20Gi: hosted/proxy-репозитории + кэш образов
 persistence:
   enabled: true
-  storageSize: 10Gi
-  # storageClass: ""   # раскомментировать для default StorageClass
+  storageClass: topolvm-provisioner
+  storageSize: 20Gi
 
 # Ресурсы контейнера Nexus
 nexus:
