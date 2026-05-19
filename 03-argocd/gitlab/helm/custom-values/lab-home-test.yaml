@@ -149,6 +149,9 @@ gitlab:
     enabled: false
   toolbox:
     enabled: true
+    image:
+      repository: harbor.lab-home.com/gitlab/gitlab-toolbox-ce
+      tag: v16.4.1-pg16
     backups:
       cron:
         enabled: true
