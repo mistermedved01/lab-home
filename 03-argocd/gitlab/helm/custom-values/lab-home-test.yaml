@@ -1,4 +1,5 @@
-installCertmanager: false
+certmanager:
+  install: false
 upgradeCheck:
   enabled: false
 nginx-ingress:
@@ -79,7 +80,6 @@ global:
       bucket: gitlab-test-lab-home-dependency-proxy
       connection: {}
     backups:
-      # Архивы test → gitlab-test-lab-home-backups; read prod (restore) — в policy MinIO
       bucket: gitlab-test-lab-home-backups
       tmpBucket: gitlab-test-lab-home-backup-tmp
   minio:
