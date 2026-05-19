@@ -1,6 +1,4 @@
 ---
-# ArgoCD Application для GitLab
-# Структура как в harbor и vault: чарт из Git, values из custom-values/lab-home.yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
