@@ -1,5 +1,5 @@
 ---
-# ArgoCD Application: GitLab TEST (проверка восстановления из бэкапа)
+# ArgoCD Application: GitLab TEST (стек как prod ecpk: chart 7.11 + GitLab 16.4.1 + PG16)
 # namespace: gitlab-test, host: https://gitlab-test.lab-home.com
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -13,7 +13,7 @@ spec:
 
   source:
     repoURL: https://github.com/mistermedved01/lab-home.git
-    path: 03-argocd/gitlab/helm/charts/gitlab-9.7.1
+    path: 03-argocd/gitlab/helm/charts/gitlab-7.11.0
     targetRevision: main
     helm:
       releaseName: gitlab

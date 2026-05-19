@@ -16,7 +16,7 @@ metadata:
 spec:
   secretName: gitlab-wildcard-tls
   issuerRef:
-    name: selfsigned-issuer
+    name: lab-home-ca-issuer
     kind: ClusterIssuer
   dnsNames:
     - gitlab-test.lab-home.com

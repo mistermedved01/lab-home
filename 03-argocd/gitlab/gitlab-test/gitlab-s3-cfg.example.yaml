@@ -1,0 +1,35 @@
+# Secret object storage + restore для GitLab TEST (namespace gitlab-test).
+# Скопируйте в gitlab-s3-cfg.yaml и примените:
+#   kubectl apply -f 03-argocd/gitlab/gitlab-test/gitlab-s3-cfg.yaml
+#
+# MinIO: отдельный user/policy только на бакеты gitlab-test-lab-home-* 
+# + read на gitlab-lab-home-backups (restore с prod). См. gitlab/gitlab-minio-policy.example.json
+#
+# Бакеты TEST (создать в MinIO):
+#   gitlab-test-lab-home-artifacts, lfs, uploads, packages, mr-diffs,
+#   terraform-state, ci-secure-files, dependency-proxy, backup-tmp
+# Бакет prod (только чтение для restore): gitlab-lab-home-backups
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gitlab-s3-cfg
+  namespace: gitlab-test
+type: Opaque
+stringData:
+  connection: |
+    provider: AWS
+    region: us-east-1
+    aws_access_key_id: <ACCESS_KEY>
+    aws_secret_access_key: <SECRET_KEY>
+    endpoint: https://minio-tenant-hl.minio-tenant.svc.cluster.local:9000
+    path_style: true
+  s3cmd: |
+    [default]
+    access_key = <ACCESS_KEY>
+    secret_key = <SECRET_KEY>
+    bucket_location = us-east-1
+    host_base = minio-tenant-hl.minio-tenant.svc.cluster.local:9000
+    host_bucket = minio-tenant-hl.minio-tenant.svc.cluster.local:9000/%(bucket)
+    use_https = True
+    check_ssl_certificate = False
