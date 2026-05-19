@@ -79,8 +79,8 @@ global:
       bucket: gitlab-test-lab-home-dependency-proxy
       connection: {}
     backups:
-      # Бакет prod — toolbox restore читает архивы оттуда
-      bucket: gitlab-lab-home-backups
+      # Архивы test → gitlab-test-lab-home-backups; read prod (restore) — в policy MinIO
+      bucket: gitlab-test-lab-home-backups
       tmpBucket: gitlab-test-lab-home-backup-tmp
   minio:
     enabled: false
@@ -151,7 +151,18 @@ gitlab:
     enabled: true
     backups:
       cron:
-        enabled: false
+        enabled: true
+        schedule: "0 2 * * *"   # как prod (lab-home.yaml)
+        extraArgs: --skip artifacts
+        successfulJobsHistoryLimit: 5
+        failedJobsHistoryLimit: 3
+        backoffLimit: 2
+        restartPolicy: Never
+        persistence:
+          enabled: true
+          size: 2Gi
+          storageClass: topolvm-provisioner
+          useGenericEphemeralVolume: false
       objectStorage:
         backend: s3
         config:
