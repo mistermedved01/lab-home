@@ -162,6 +162,11 @@ postgresql:
   image:
     repository: bitnamilegacy/postgresql
     tag: "16.6.0"
+  metrics:
+    enabled: true
+    image:
+      repository: bitnamilegacy/postgres-exporter
+      tag: 0.15.0-debian-11-r7
   auth:
     username: gitlab
     password: "gitlab123"
@@ -180,6 +185,14 @@ postgresql:
 
 redis:
   install: true
+  image:
+    repository: bitnamilegacy/redis
+    tag: 7.2.4-debian-12-r9
+  metrics:
+    enabled: true
+    image:
+      repository: bitnamilegacy/redis-exporter
+      tag: 1.58.0-debian-12-r4
   architecture: standalone
   master:
     persistence:
