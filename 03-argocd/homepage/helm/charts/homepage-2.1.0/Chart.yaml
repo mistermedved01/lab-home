@@ -1,0 +1,19 @@
+annotations:
+  artifacthub.io/changes: |-
+    - kind: added
+      description: Updated base app
+apiVersion: v2
+appVersion: v1.2.0
+dependencies:
+- name: common
+  repository: https://bjw-s-labs.github.io/helm-charts
+  version: 1.5.1
+description: Chart for Homepage
+icon: https://github.com/gethomepage/homepage/blob/main/public/mstile-150x150.png
+maintainers:
+- name: jameswynn
+name: homepage
+sources:
+- https://github.com/jameswynn/helm-charts/charts/homepage
+- https://github.com/gethomepage/homepage/
+version: 2.1.0

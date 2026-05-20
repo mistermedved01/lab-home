@@ -1,0 +1,40 @@
+env:
+  - name: HOMEPAGE_ALLOWED_HOSTS
+    value: "homepage.lab-home.com,homepage.lab-home.com:30443,localhost"
+  - name: PUID
+    value: "1000"
+  - name: PGID
+    value: "1000"
+
+ingress:
+  main:
+    enabled: true
+    ingressClassName: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: "lab-home-ca-issuer"
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+      nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/upstream-vhost: "homepage.lab-home.com"
+    hosts:
+      - host: homepage.lab-home.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: homepage-tls
+        hosts:
+          - homepage.lab-home.com
+
+resources:
+  requests:
+    memory: 128Mi
+    cpu: 100m
+  limits:
+    memory: 256Mi
+    cpu: 500m
+
+config:
+  settingsString: |
+    title: lab-home
+    headerStyle: boxed

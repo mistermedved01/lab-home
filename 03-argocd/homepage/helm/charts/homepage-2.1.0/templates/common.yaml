@@ -1,0 +1,60 @@
+{{- include "bjw-s.common.loader.init" . }}
+
+{{- define "app-template.hardcodedValues" -}}
+
+# Set the nameOverride based on the release name if no override has been set
+{{ if not .Values.global.nameOverride }}
+global:
+  nameOverride: "{{ .Release.Name }}"
+{{ end }}
+
+{{- end -}}
+{{- $_ := mergeOverwrite .Values (include "app-template.hardcodedValues" . | fromYaml) -}}
+
+{{/* Append the configMap volume to the volumes */}}
+{{- define "homepage.configVolume" -}}
+enabled: "true"
+type: "custom"
+volumeSpec:
+  configMap:
+    name: {{ (default (include "bjw-s.common.lib.chart.names.fullname" .) .Values.config.useExistingConfigMap) }}
+subPath:
+  - path: bookmarks.yaml
+    mountPath: /app/config/bookmarks.yaml
+  - path: docker.yaml
+    mountPath: /app/config/docker.yaml
+  - path: kubernetes.yaml
+    mountPath: /app/config/kubernetes.yaml
+  - path: services.yaml
+    mountPath: /app/config/services.yaml
+  - path: settings.yaml
+    mountPath: /app/config/settings.yaml
+  - path: widgets.yaml
+    mountPath: /app/config/widgets.yaml
+{{- end -}}
+{{/* Append the base config dir, to enable custom css/js to be copied at startup */}}
+{{- define "homepage.baseConfigVolume" -}}
+enabled: "true"
+type: "custom"
+volumeSpec:
+  emptyDir: {}
+mountPath: /app/config
+{{- end -}}
+
+{{ $checkSum := ( print .Values | sha256sum ) -}}
+
+{{- $_ := set .Values.persistence "homepage-base-config" (include "homepage.baseConfigVolume" . | fromYaml) -}}
+{{- $_ := set .Values.persistence "homepage-config" (include "homepage.configVolume" . | fromYaml) -}}
+
+{{- $_ := set .Values.controller.annotations "values-checksum" $checkSum -}}
+{{- $_ := set .Values.podAnnotations "values-checksum" $checkSum -}}
+
+{{ if .Values.enableRbac }}
+{{- $_ := set .Values.serviceAccount "create" "true" -}}
+{{ end }}
+
+{{ include "homepage.configmap" . }}
+{{ include "homepage.rbac" . }}
+
+{{/* Render the templates */}}
+{{ include "bjw-s.common.loader.generate" . }}
