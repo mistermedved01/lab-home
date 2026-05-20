@@ -1,10 +1,7 @@
+# PUID/PGID не задавать: entrypoint делает chown /app/config, а YAML из ConfigMap — read-only
 env:
   - name: HOMEPAGE_ALLOWED_HOSTS
     value: "homepage.lab-home.com,homepage.lab-home.com:30443,localhost"
-  - name: PUID
-    value: "1000"
-  - name: PGID
-    value: "1000"
 
 ingress:
   main:
