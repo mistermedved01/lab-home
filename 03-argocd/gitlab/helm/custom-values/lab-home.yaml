@@ -16,7 +16,32 @@ registry:
   enabled: false
 
 gitlab-runner:
-  install: false
+  install: true
+  rbac:
+    create: true
+  concurrent: 3
+  runners:
+    locked: false
+    runUntagged: true
+    tags: "lab-home,kubernetes"
+    secret: "nonempty"
+    config: |
+      [[runners]]
+        [runners.kubernetes]
+        namespace = "gitlab"
+        image = "ubuntu:22.04"
+        cpu_request = "100m"
+        memory_request = "256Mi"
+        cpu_limit = "1"
+        memory_limit = "2Gi"
+        poll_timeout = 600
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
 
 # === GLOBAL ===
 global:
