@@ -66,6 +66,8 @@ global:
     enabled: false
 
   appConfig:
+    defaultProjectsFeatures:
+      containerRegistry: false
     # Object storage в MinIO (как gitlab-c1 prod): Secret gitlab-s3-cfg, ключ connection
     object_store:
       enabled: true
