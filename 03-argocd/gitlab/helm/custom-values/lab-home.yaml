@@ -23,6 +23,7 @@ gitlab-runner:
     - ip: "192.168.7.240"
       hostnames:
         - gitlab.lab-home.com
+        - harbor.lab-home.com
   certsSecretName: gitlab-runner-ca
   concurrent: 3
   runners:
@@ -40,6 +41,9 @@ gitlab-runner:
         cpu_limit = "1"
         memory_limit = "2Gi"
         poll_timeout = 600
+        [[runners.kubernetes.host_aliases]]
+          ip = "192.168.7.240"
+          hostnames = ["gitlab.lab-home.com", "harbor.lab-home.com"]
   resources:
     requests:
       cpu: 100m
