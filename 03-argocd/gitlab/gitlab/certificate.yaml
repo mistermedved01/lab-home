@@ -1,13 +1,4 @@
 ---
-# Certificate для GitLab с правильными настройками для cert-manager
-# Этот файл нужно применить ПОСЛЕ развертывания GitLab
-# 
-# Применение:
-# kubectl apply -f 03-argocd/gitlab/gitlab/certificate.yaml
-#
-# Или удалить автоматически созданный Certificate и применить этот:
-# kubectl delete certificate gitlab-wildcard-tls -n gitlab
-# kubectl apply -f 03-argocd/gitlab/gitlab/certificate.yaml
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -16,11 +7,10 @@ metadata:
 spec:
   secretName: gitlab-wildcard-tls
   issuerRef:
-    name: selfsigned-issuer
+    name: lab-home-ca-issuer
     kind: ClusterIssuer
   dnsNames:
     - gitlab.lab-home.com
-  # Настройки приватного ключа
   privateKey:
-    # Разрешить cert-manager пересоздавать ключ при несоответствии
+    # Allow cert-manager to regenerate the private key on mismatch
     rotationPolicy: Always
