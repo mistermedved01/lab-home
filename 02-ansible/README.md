@@ -185,10 +185,11 @@ ansible-playbook helm/helm.yml -i inventory/prod/hosts.yaml
 # Шаг 6: Установка ingress-nginx
 ansible-playbook ingress-nginx/ingress-nginx.yml -i inventory/prod/hosts.yaml
 
-# Шаг 7: Установка ArgoCD
+# Шаг 7: Установка ArgoCD (Helm upgrade при повторном запуске — без переустановки)
 ansible-playbook argocd/argocd.yml -i inventory/prod/hosts.yaml
 
-# Шаг 8: Обновление ingress для ArgoCD (если нужно изменить домен)
+# Шаг 8 (опционально): patch ingress через kubectl, если Helm не обновил host
+# Обычно достаточно шага 7: домен и TLS задаются в values + --set global.domain
 ansible-playbook argocd/argocd-ingress.yml -i inventory/prod/hosts.yaml
 
 # Шаг 9: Установка node_exporter на Proxmox хосты (требуется SSH root на Proxmox)
@@ -256,7 +257,7 @@ ansible-playbook site.yml --skip-tags restart
 - **cni** - установка CNI плагина (Flannel)
 - **helm** - установка Helm package manager
 - **ingress-nginx** - установка ingress-nginx через Helm
-- **argocd** - установка ArgoCD через Helm
+- **argocd** - установка ArgoCD через Helm; TLS на ingress (cert-manager, ClusterIssuer `lab-home-ca-issuer`)
 - **node-exporter** - установка node_exporter на Proxmox хосты
 
 ### Playbooks
@@ -290,8 +291,12 @@ pod_network_cidr: "10.244.0.0/16"
 # Домен для ArgoCD
 argocd_domain: "argocd.lab-home.com"
 
-# Порт ingress-nginx (NodePort)
+# Порт ingress-nginx (NodePort) — запасной путь, отладка
 ingress_nginx_http_port: 30080
+
+# URL в выводе playbook: false = https://argocd.lab-home.com (MetalLB :443)
+# true = с портом NodePort, например https://argocd.lab-home.com:30080
+use_port_in_url: false
 
 # Путь к Helm values файлам (по умолчанию /etc/ansible/playbooks)
 playbooks_dir: "/etc/ansible/playbooks"
@@ -302,7 +307,11 @@ playbooks_dir: "/etc/ansible/playbooks"
 Helm values файлы находятся рядом с соответствующими playbooks:
 
 - `playbooks/ingress-nginx/values.yaml` - конфигурация для ingress-nginx
-- `playbooks/argocd/values.yaml` - конфигурация для ArgoCD
+- `playbooks/argocd/values.yaml` - конфигурация для ArgoCD (чарт argo-cd 9.x: `global.domain`, `server.ingress.hostname`, `tls: true`, аннотация `cert-manager.io/cluster-issuer`)
+
+Домен Argo CD в playbook переопределяется: `--set global.domain={{ argocd_domain }} --set server.ingress.hostname={{ argocd_domain }}`.
+
+**Доступ к Argo CD после установки:** `https://argocd.lab-home.com` (DNS на MetalLB VIP ingress, TLS-сертификат `argocd-server-tls` от cert-manager). На админском ПК должен быть доверен корневой CA кластера (`lab-home-root-ca`).
 
 Файлы автоматически копируются вместе с playbooks через Terraform скрипт `push_ansible_files.sh`.
 
@@ -359,6 +368,8 @@ kubectl get pods -n ingress-nginx
 
 # Проверка ArgoCD
 kubectl get pods -n argocd
+kubectl get certificate,secret -n argocd | grep argocd-server-tls
+kubectl get ingress -n argocd
 
 # Проверка Helm релизов
 helm list -A
@@ -528,7 +539,7 @@ helm repo list
 
 ### Проблемы с ArgoCD
 
-**Симптом:** ArgoCD недоступен
+**Симптом:** ArgoCD недоступен или браузер ругается на сертификат
 
 **Решение:**
 ```bash
@@ -538,8 +549,14 @@ kubectl get pods -n argocd
 # Проверить логи
 kubectl logs -n argocd -l app.kubernetes.io/name=argocd-server
 
-# Проверить Ingress
+# Проверить Ingress и TLS
 kubectl get ingress -n argocd
+kubectl describe certificate argocd-server-tls -n argocd
+
+# Сертификат должен быть Ready, dnsNames: argocd.lab-home.com
+kubectl get certificate argocd-server-tls -n argocd -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}{"\n"}{.spec.dnsNames}{"\n"}'
 ```
 
-</details>
+После смены домена или values перезапустите `ansible-playbook argocd/argocd.yml` (это `helm upgrade`, не удаление релиза).
+
+</details>
