@@ -37,10 +37,9 @@ argocd_domain: "argocd.lab-home.com"
 ingress_nginx_http_port: 30080
 
 # Использовать порт в URL (true/false)
-# Если false, URL будет без порта (например, http://argocd.lab-home.com)
-# Если true, URL будет с портом (например, http://argocd.lab-home.com:30080)
-# Установите false, если DNS настроен на стандартный порт 80 и есть внешний балансировщик
-use_port_in_url: true
+# false — MetalLB / ingress на :443 (https://argocd.lab-home.com)
+# true  — NodePort (https://argocd.lab-home.com:30080)
+use_port_in_url: false
 
 # Путь к kubeconfig файлу
 kubeconfig_path: "/home/{{ ansible_user }}/.kube/config"

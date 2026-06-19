@@ -70,7 +70,7 @@
     helm_chart_name: "{{ argocd_helm_chart_name }}"
     helm_namespace: "{{ argocd_helm_namespace }}"
     helm_values_file: "{{ argocd_helm_values_file }}"
-    helm_extra_args: "--set server.ingress.hosts[0]={{ argocd_domain }}"
+    helm_extra_args: "--set global.domain={{ argocd_domain }} --set server.ingress.hostname={{ argocd_domain }}"
     # --force-conflicts при upgrade обходит конфликт SSA (applicationset-controller env NAMESPACE)
     helm_upgrade_extra_args: "--force-conflicts"
   tags:

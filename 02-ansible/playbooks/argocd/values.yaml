@@ -1,5 +1,9 @@
 # ArgoCD Helm Chart Values
 # Документация: https://github.com/argoproj/argo-helm/tree/main/charts/argo-cd
+# Чарт 9.x: global.domain + server.ingress.hostname (не hosts[])
+
+global:
+  domain: argocd.lab-home.com
 
 # Настройки сервера ArgoCD
 server:
@@ -14,16 +18,14 @@ server:
   ingress:
     enabled: true
     ingressClassName: nginx
-    # Домен для доступа к ArgoCD
-    # Примечание: домен настраивается через переменную argocd_domain в group_vars/all/main.yml
-    # и переопределяется через --set при установке/обновлении через Ansible playbook
-    hosts:
-      - argocd.lab-home.com
-    # Аннотации для работы ArgoCD через ingress-nginx (HTTP режим)
+    # Домен: argocd_domain в group_vars; переопределяется --set в playbook
+    hostname: argocd.lab-home.com
+    # TLS на ingress (cert-manager → Secret argocd-server-tls)
+    tls: true
     annotations:
-      # Отключаем SSL redirect для работы через HTTP
-      nginx.ingress.kubernetes.io/ssl-redirect: "false"
-      # Используем HTTP для backend (ArgoCD будет работать в insecure режиме)
+      cert-manager.io/cluster-issuer: "lab-home-ca-issuer"
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      # TLS терминируется на ingress; pod слушает HTTP (server.insecure)
       nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
 
   # Ресурсы
@@ -85,7 +87,7 @@ redis:
       cpu: 200m
       memory: 128Mi
 
-# Включаем insecure режим для работы через HTTP (только для тестовой среды!)
+# Insecure на pod: TLS только на ingress (termination), не в argocd-server
 configs:
   params:
     server.insecure: "true"

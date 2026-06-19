@@ -43,9 +43,9 @@
   ansible.builtin.set_fact:
     argocd_url: >
       {%- if use_port_in_url -%}
-        http://{{ argocd_domain }}:{{ ingress_nginx_http_port }}
+        https://{{ argocd_domain }}:{{ ingress_nginx_http_port }}
       {%- else -%}
-        http://{{ argocd_domain }}
+        https://{{ argocd_domain }}
       {%- endif -%}
   tags:
     - argocd
