@@ -1,0 +1,53 @@
+# Скопируйте в terraform.tfvars и поправьте под кластер.
+# Шаблон LXC: в Proxmox — pvesm list <storage> --content vztmpl
+# или Datacenter → storage → ISO/React → шаблоны.
+
+proxmox_nodes = {
+  "pve-node-01" = {
+    endpoint       = "https://192.168.7.151:8006/"
+    api_token      = "terraform@pve!token-name=YOUR_TOKEN"
+    node_name      = "pve"
+    datastore_id   = "local-lvm"
+    network_bridge = "vmbr0"
+  }
+  "pve-node-02" = {
+    endpoint       = "https://192.168.7.152:8006/"
+    api_token      = "terraform@pve!token-name=YOUR_TOKEN"
+    node_name      = "pve"
+    datastore_id   = "local-lvm"
+    network_bridge = "vmbr0"
+  }
+  "pve-node-03" = {
+    endpoint       = "https://192.168.7.153:8006/"
+    api_token      = "terraform@pve!token-name=YOUR_TOKEN"
+    node_name      = "pve"
+    datastore_id   = "local-lvm"
+    network_bridge = "vmbr0"
+  }
+}
+
+gateway_ip        = "192.168.7.1"
+network_cidr_bits = 24
+dns_servers       = ["192.168.7.1", "1.1.1.1"]
+
+ssh_public_key = "ssh-ed25519 AAAA...you@host"
+
+lxc_list = {
+  # Пример: Zabbix или любой другой сервис
+  zabbix-01 = {
+    hostname         = "zabbix-01"
+    vm_id            = 2100
+    ipv4_address     = "192.168.7.170"
+    proxmox_node     = "pve-node-01"
+    template_file_id = "local:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
+    os_type          = "ubuntu"
+    cpu_cores        = 2
+    memory_mb        = 4096
+    rootfs_gb        = 32
+    unprivileged     = true
+    nesting          = false
+  }
+}
+
+# proxmox_ssh_key_path = "../../../../vm-ubuntu/live/keys/id_ed25519"
+# proxmox_use_ssh_agent = false
