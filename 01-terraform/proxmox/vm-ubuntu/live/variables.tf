@@ -229,7 +229,7 @@ variable "ansible_ssh_key_path" {
 variable "ansible_version" {
   description = "Версия Ansible для установки на control VM. Укажите 'latest' для последней доступной версии из PPA."
   type        = string
-  default     = "13.3.0-1ppa~noble"
+  default     = "latest"
   validation {
     condition     = length(var.ansible_version) > 0
     error_message = "ansible_version не может быть пустым"
