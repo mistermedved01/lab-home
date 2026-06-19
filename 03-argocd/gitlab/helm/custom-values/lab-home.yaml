@@ -1,6 +1,3 @@
-# GitLab values для окружения lab-home (чарт helm/charts/gitlab-9.7.1)
-
-# === ОСНОВНЫЕ НАСТРОЙКИ ===
 installCertmanager: false
 
 upgradeCheck:
@@ -52,7 +49,6 @@ gitlab-runner:
       cpu: 500m
       memory: 512Mi
 
-# === GLOBAL ===
 global:
   registry:
     enabled: false
@@ -63,7 +59,7 @@ global:
     configureCertmanager: false
     class: nginx
     annotations:
-      cert-manager.io/cluster-issuer: "selfsigned-issuer"
+      cert-manager.io/cluster-issuer: "lab-home-ca-issuer"
       nginx.ingress.kubernetes.io/ssl-redirect: "true"
     tls:
       enabled: true
@@ -72,7 +68,6 @@ global:
     enabled: false
 
   appConfig:
-    # Object storage в MinIO (как gitlab-c1 prod): Secret gitlab-s3-cfg, ключ connection
     object_store:
       enabled: true
       proxy_download: true
@@ -129,7 +124,6 @@ global:
   grafana:
     enabled: false
 
-# === GITLAB ===
 gitlab:
   upgradeCheck:
     enabled: false
@@ -139,7 +133,7 @@ gitlab:
     maxReplicas: 1
     deployment:
       livenessProbe:
-        initialDelaySeconds: 200   # GitLab долго грузится (1–3 мин)
+        initialDelaySeconds: 200
       readinessProbe:
         initialDelaySeconds: 120
         failureThreshold: 12
@@ -149,7 +143,7 @@ gitlab:
         memory: 2G
       limits:
         cpu: "1"
-        memory: 4G   # было 2.5G — OOMKilled при нагрузке
+        memory: 4G
   sidekiq:
     replicas: 1
     minReplicas: 1
@@ -193,8 +187,8 @@ gitlab:
     backups:
       cron:
         enabled: true
-        schedule: "0 2 * * *"   # каждый день в 02:00
-        extraArgs: --skip artifacts   # артефакты уже в S3-бакете artifacts
+        schedule: "0 2 * * *"
+        extraArgs: --skip artifacts
         successfulJobsHistoryLimit: 5
         failedJobsHistoryLimit: 3
         backoffLimit: 2
@@ -210,7 +204,6 @@ gitlab:
           secret: gitlab-s3-cfg
           key: s3cmd
 
-# === БАЗЫ ===
 postgresql:
   auth:
     username: gitlab
