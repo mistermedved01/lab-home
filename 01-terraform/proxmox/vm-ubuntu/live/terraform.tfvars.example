@@ -69,6 +69,7 @@ vm_list = {
     vm_cores        = 4
     vm_memory       = 8000
     vm_disk_size    = 30
+    #vm_disk_size_extra = 30
     cloud_init_file = "k8s-worker.yaml.tftpl"
     role            = "k8s_worker"
     proxmox_node    = "pve-node-01"
