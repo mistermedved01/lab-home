@@ -1,0 +1,12 @@
+{{- if and .Values.ca.enabled (not .Values.ca.existingConfigMap) }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.ca.configMapName }}
+  namespace: {{ include "gitlab-tokens-exporter.namespace" . }}
+  labels:
+    {{- include "gitlab-tokens-exporter.labels" . | nindent 4 }}
+data:
+  {{ .Values.ca.key }}: |
+{{ .Files.Get (printf "files/%s" .Values.ca.fileName) | indent 4 }}
+{{- end }}

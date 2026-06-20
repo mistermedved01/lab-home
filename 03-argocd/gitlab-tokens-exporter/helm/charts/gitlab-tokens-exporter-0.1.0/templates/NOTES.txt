@@ -1,0 +1,18 @@
+GitLab tokens exporter installed in namespace {{ include "gitlab-tokens-exporter.namespace" . }}.
+
+GitLab host: {{ .Values.gitlab.hostname }}
+
+{{- if .Values.externalSecrets.enabled }}
+Wait for ExternalSecret:
+  kubectl -n {{ include "gitlab-tokens-exporter.namespace" . }} get externalsecret,secretstore
+{{- else }}
+Ensure Secret exists:
+  kubectl -n {{ include "gitlab-tokens-exporter.namespace" . }} get secret {{ .Values.secret.name }}
+{{- end }}
+
+Metrics:
+  kubectl -n {{ include "gitlab-tokens-exporter.namespace" . }} port-forward svc/gitlab-tokens-exporter 13000:3000
+  curl -s http://127.0.0.1:13000/metrics | head
+
+Logs:
+  kubectl -n {{ include "gitlab-tokens-exporter.namespace" . }} logs deploy/gitlab-tokens-exporter -f

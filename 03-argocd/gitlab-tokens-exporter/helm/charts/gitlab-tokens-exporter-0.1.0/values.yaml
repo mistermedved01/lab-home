@@ -1,0 +1,67 @@
+# Generic defaults — environment-specific values in helm/custom-values/*.yaml
+
+nameOverride: ""
+fullnameOverride: ""
+
+# Empty = helm install --namespace (Release.Namespace)
+namespace: ""
+
+replicaCount: 1
+
+image:
+  repository: cnieg/gitlab-tokens-exporter
+  tag: latest
+  pullPolicy: IfNotPresent
+
+gitlab:
+  hostname: gitlab.example.com
+
+exporter:
+  skipUsersTokens: true
+
+ca:
+  enabled: true
+  existingConfigMap: ""
+  configMapName: gitlab-root-ca
+  key: ca.crt
+  fileName: ca.crt
+  mountPath: /etc/ssl/certs/gitlab-ca.crt
+
+hostAliases: []
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi
+
+service:
+  type: ClusterIP
+  port: 3000
+
+serviceAccount:
+  create: true
+  name: gitlab-tokens-exporter
+  annotations: {}
+
+secret:
+  name: gitlab-tokens-exporter
+  key: token
+
+externalSecrets:
+  enabled: false
+  refreshInterval: 15s
+  secretStore:
+    name: vault-secret-store
+  vault:
+    server: https://vault.example.com
+    path: secret
+    version: v2
+    kubernetes:
+      mountPath: kubernetes
+      role: example
+  remoteRef:
+    key: gitlab-tokens-exporter
+    property: token

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: gitlab-tokens-exporter
+description: Prometheus exporter for GitLab access token expiration (cnieg/gitlab-tokens-exporter)
+type: application
+version: 0.1.0
+appVersion: "3.0.2"

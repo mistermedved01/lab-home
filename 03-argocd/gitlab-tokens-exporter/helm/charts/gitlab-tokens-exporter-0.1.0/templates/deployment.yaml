@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gitlab-tokens-exporter
+  namespace: {{ include "gitlab-tokens-exporter.namespace" . }}
+  labels:
+    {{- include "gitlab-tokens-exporter.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "gitlab-tokens-exporter.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "gitlab-tokens-exporter.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.hostAliases }}
+      hostAliases:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: exporter
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: metrics
+              containerPort: 3000
+          env:
+            - name: GITLAB_HOSTNAME
+              value: {{ .Values.gitlab.hostname | quote }}
+            - name: GITLAB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secret.name }}
+                  key: {{ .Values.secret.key }}
+            {{- if .Values.ca.enabled }}
+            - name: SSL_CERT_FILE
+              value: {{ .Values.ca.mountPath | quote }}
+            {{- end }}
+            {{- if .Values.exporter.skipUsersTokens }}
+            - name: SKIP_USERS_TOKENS
+              value: "yes"
+            {{- end }}
+            {{- if .Values.exporter.skipNonExpiringTokens }}
+            - name: SKIP_NON_EXPIRING_TOKENS
+              value: "yes"
+            {{- end }}
+            {{- if .Values.exporter.dataRefreshHours }}
+            - name: DATA_REFRESH_HOURS
+              value: {{ .Values.exporter.dataRefreshHours | quote }}
+            {{- end }}
+            {{- if .Values.exporter.ownedEntitiesOnly }}
+            - name: OWNED_ENTITIES_ONLY
+              value: "yes"
+            {{- end }}
+            {{- if .Values.exporter.acceptInvalidCerts }}
+            - name: ACCEPT_INVALID_CERTS
+              value: "yes"
+            {{- end }}
+          {{- if .Values.ca.enabled }}
+          volumeMounts:
+            - name: gitlab-ca
+              mountPath: {{ .Values.ca.mountPath }}
+              subPath: {{ .Values.ca.key }}
+              readOnly: true
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- if .Values.ca.enabled }}
+      volumes:
+        - name: gitlab-ca
+          configMap:
+            name: {{ .Values.ca.existingConfigMap | default .Values.ca.configMapName }}
+            items:
+              - key: {{ .Values.ca.key }}
+                path: {{ .Values.ca.key }}
+      {{- end }}

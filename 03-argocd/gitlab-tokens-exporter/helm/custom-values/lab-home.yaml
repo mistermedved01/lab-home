@@ -1,0 +1,28 @@
+# lab-home cluster
+
+namespace: gitlab
+
+image:
+  repository: harbor.lab-home.com/gitlab/gitlab-tokens-exporter
+  tag: 3.0.2
+  pullPolicy: Always
+
+gitlab:
+  hostname: gitlab.lab-home.com
+
+hostAliases:
+  - ip: "192.168.7.240"
+    hostnames:
+      - gitlab.lab-home.com
+
+ca:
+  configMapName: gitlab-root-ca
+  fileName: lab-home-root-ca.crt
+  mountPath: /etc/ssl/certs/lab-home-root-ca.crt
+
+externalSecrets:
+  enabled: false
+
+secret:
+  name: gitlab-tokens-exporter
+  key: token
