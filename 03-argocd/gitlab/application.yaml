@@ -1,10 +1,8 @@
 ---
-# ArgoCD Application: GitLab TEST (стек как prod ecpk: chart 7.11 + GitLab 16.4.1 + PG16)
-# namespace: gitlab-test, host: https://gitlab-test.lab-home.com
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: gitlab-test
+  name: gitlab
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
@@ -13,16 +11,16 @@ spec:
 
   source:
     repoURL: https://github.com/mistermedved01/lab-home.git
-    path: 03-argocd/gitlab/helm/charts/gitlab-7.11.0
+    path: 03-argocd/gitlab/helm/charts/gitlab-9.7.1
     targetRevision: main
     helm:
       releaseName: gitlab
       valueFiles:
-        - ../../custom-values/lab-home-test.yaml
+        - ../../custom-values/lab-home.yaml
 
   destination:
     server: https://kubernetes.default.svc
-    namespace: gitlab-test
+    namespace: gitlab
 
   syncPolicy:
     automated:

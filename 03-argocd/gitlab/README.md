@@ -33,37 +33,50 @@
    kubectl get clusterissuer selfsigned-issuer
    ```
 
-3. **Примените ArgoCD Application для GitLab:**
+3. **Создайте Secret'ы (S3 и CA для runner):**
    ```bash
-   kubectl apply -f 03-argocd/gitlab/gitlab/application.yaml
+   cp 03-argocd/gitlab/manifests/gitlab-s3-cfg.example.yaml \
+      03-argocd/gitlab/manifests/gitlab-s3-cfg.yaml
+   # отредактируйте ключи MinIO, затем:
+   kubectl apply -f 03-argocd/gitlab/manifests/gitlab-s3-cfg.yaml
+
+   cp 03-argocd/gitlab/manifests/gitlab-runner-ca-secret.example.yaml \
+      03-argocd/gitlab/manifests/gitlab-runner-ca-secret.yaml
+   # подставьте PEM корневого CA, затем:
+   kubectl apply -f 03-argocd/gitlab/manifests/gitlab-runner-ca-secret.yaml
+   ```
+
+4. **Примените ArgoCD Application для GitLab:**
+   ```bash
+   kubectl apply -f 03-argocd/gitlab/application.yaml
    ```
    
    После развертывания cert-manager автоматически создаст Certificate на основе аннотаций Ingress.
 
-4. **Примените Certificate с правильными настройками (опционально, если возникли проблемы):**
+5. **Примените Certificate с правильными настройками (опционально, если возникли проблемы):**
    ```bash
    # Удалить автоматически созданный Certificate
    kubectl delete certificate gitlab-wildcard-tls -n gitlab
    
    # Применить Certificate с правильной настройкой rotationPolicy
-   kubectl apply -f 03-argocd/gitlab/gitlab/certificate.yaml
+   kubectl apply -f 03-argocd/gitlab/manifests/certificate.yaml
    ```
 
-5. **Дождитесь готовности подов (10-20 минут):**
+6. **Дождитесь готовности подов (10-20 минут):**
    ```bash
    kubectl get pods -n gitlab -w
    # Все поды должны быть в состоянии Running
    ```
 
-6. **Получите root пароль:**
+7. **Получите root пароль:**
    ```bash
    kubectl get secret gitlab-gitlab-initial-root-password -n gitlab -ojsonpath='{.data.password}' | base64 -d ; echo
    ```
 
-7. **Войдите в GitLab:**
-   - URL: `http://gitlab.lab-home.com:30080`
+8. **Войдите в GitLab:**
+   - URL: `https://gitlab.lab-home.com`
    - Username: `root`
-   - Password: (из шага 6)
+   - Password: (из шага 7)
 
 📋 **Детальные инструкции:** см. секции ниже
 
@@ -129,7 +142,7 @@ graph TB
 
 ### Основные параметры
 
-- **Файл Application**: `03-argocd/gitlab/gitlab/application.yaml`
+- **Файл Application**: `03-argocd/gitlab/application.yaml`
 - **Namespace**: `gitlab`
 - **Тип источника**: Git (распакованный чарт GitLab 9.7.1 в `helm/charts/gitlab-9.7.1`, values в `helm/custom-values/lab-home.yaml`)
 - **URL**: `https://gitlab.lab-home.com` (или `http://gitlab.lab-home.com:30080` до настройки Ingress)
@@ -141,31 +154,30 @@ graph TB
 
 ---
 
-Структура: чарт в Git, values в `helm/custom-values/`. Прод (lab-home) и тест — в подкаталогах.
+Структура: Argo CD Application в корне, ручные манифесты в `manifests/`, чарт и values в `helm/`.
 
 ```
 03-argocd/gitlab/
-├── gitlab/                        # Прод lab-home (namespace gitlab)
-│   ├── application.yaml
+├── application.yaml               # Argo CD Application (Helm)
+├── README.md
+├── .gitignore
+├── manifests/                     # kubectl apply (не в Argo CD sync)
 │   ├── certificate.yaml
-│   ├── gitlab-backup-s3-secret.example.yaml
-│   ├── gitlab-backup-s3-secret.yaml        # в .gitignore
-│   └── gitlab-toolbox-backup-tmp-cleanup.yaml   # CronJob очистки PVC /srv/gitlab/tmp
-├── gitlab-test/                   # Тест восстановления (namespace gitlab-test)
-│   ├── application.yaml
-│   ├── certificate.yaml
-│   ├── gitlab-backup-s3-secret.example.yaml
-│   └── gitlab-backup-s3-secret.yaml         # в .gitignore
-├── README.md                      # этот файл
+│   ├── gitlab-s3-cfg.example.yaml
+│   ├── gitlab-s3-cfg.yaml             # локально, в .gitignore
+│   ├── gitlab-runner-ca-secret.example.yaml
+│   └── gitlab-runner-ca-secret.yaml   # локально, в .gitignore
 └── helm/
     ├── custom-values/
-    │   ├── lab-home.yaml
-    │   └── lab-home-test.yaml
+    │   └── lab-home.yaml
     └── charts/
-        └── gitlab-9.7.1/
+        ├── gitlab-7.11.0/
+        └── gitlab-9.7.1/          # активная версия в application.yaml
 ```
 
-**Примечание**: Namespace `gitlab` создаётся автоматически через `CreateNamespace=true`.
+**Примечание**: Namespace `gitlab` создаётся автоматически через `CreateNamespace=true`. Secret'ы из `manifests/` нужно применить до или сразу после первого sync.
+
+**Связанное приложение**: tokens exporter — [`../gitlab-tokens-exporter/`](../gitlab-tokens-exporter/README.md).
 
 </details>
 
@@ -266,7 +278,7 @@ kubectl describe clusterissuer selfsigned-issuer
 
 ```bash
 # Применить Application
-kubectl apply -f 03-argocd/gitlab/gitlab/application.yaml
+kubectl apply -f 03-argocd/gitlab/application.yaml
 
 # Проверить статус Application
 kubectl get application gitlab -n argocd
@@ -289,7 +301,7 @@ kubectl delete certificate gitlab-wildcard-tls -n gitlab
 kubectl delete secret gitlab-wildcard-tls gitlab-wildcard-tls-ca gitlab-wildcard-tls-chain -n gitlab
 
 # Применить Certificate с правильной настройкой rotationPolicy
-kubectl apply -f 03-argocd/gitlab/gitlab/certificate.yaml
+kubectl apply -f 03-argocd/gitlab/manifests/certificate.yaml
 
 # Проверить статус Certificate
 kubectl get certificate gitlab-wildcard-tls -n gitlab
@@ -677,7 +689,7 @@ kubectl delete namespace gitlab
 kubectl get namespace gitlab
 
 # После удаления namespace примените Application снова
-kubectl apply -f 03-argocd/gitlab/gitlab/application.yaml
+kubectl apply -f 03-argocd/gitlab/application.yaml
 ```
 
 **Важно**: Это действие удалит все данные GitLab (репозитории, пользователи, настройки). Используйте только для новой установки или тестовой среды.
@@ -792,7 +804,7 @@ kubectl delete certificate gitlab-wildcard-tls -n gitlab
 kubectl delete secret gitlab-wildcard-tls gitlab-wildcard-tls-ca gitlab-wildcard-tls-chain -n gitlab
 
 # Применить Certificate с правильными настройками
-kubectl apply -f 03-argocd/gitlab/gitlab/certificate.yaml
+kubectl apply -f 03-argocd/gitlab/manifests/certificate.yaml
 
 # Проверить статус
 kubectl get certificate gitlab-wildcard-tls -n gitlab
@@ -833,17 +845,17 @@ kubectl get certificate gitlab-wildcard-tls -n gitlab
 Включён встроенный механизм GitLab (CronJob в toolbox): бэкапы по расписанию в S3-совместимое хранилище (например, MinIO tenant).
 
 **Что уже настроено в `helm/custom-values/lab-home.yaml`:**
-- `global.appConfig.backups.bucket`: `gitlab-toolbox-backup`
-- `global.appConfig.backups.tmpBucket`: `gitlab-toolbox-backup-tmp`
+- `global.appConfig.backups.bucket`: `gitlab-lab-home-backups`
+- `global.appConfig.backups.tmpBucket`: `gitlab-lab-home-backup-tmp`
 - `gitlab.toolbox.enabled: true`, `backups.cron.enabled: true`
 - Расписание: ежедневно в 02:00 (`0 2 * * *`)
-- Бэкенд: S3, конфиг из Secret `gitlab-backup-s3-config` (ключ `config`)
+- Object store и бэкапы: Secret `gitlab-s3-cfg` (ключи `connection`, `s3cmd`)
 
 **Шаги для активации бэкапов:**
 
-1. **Создать бакеты в MinIO:** `gitlab-toolbox-backup`, `gitlab-toolbox-backup-tmp`.
+1. **Создать бакеты в MinIO:** `gitlab-lab-home-backups`, `gitlab-lab-home-backup-tmp` (и бакеты object store из values).
 
-2. **Создать Secret с конфигом S3** в namespace `gitlab` (формат .s3cfg, ключ `config`). Рекомендуется использовать внутренний сервис MinIO.
+2. **Создать Secret `gitlab-s3-cfg`** в namespace `gitlab` — см. `manifests/gitlab-s3-cfg.example.yaml`.
 
 3. После создания Secret и бакетов CronJob `gitlab-toolbox-backup` в namespace `gitlab` будет запускаться по расписанию. Проверка:
    ```bash
@@ -851,10 +863,9 @@ kubectl get certificate gitlab-wildcard-tls -n gitlab
    kubectl get jobs -n gitlab
    ```
 
-Подробная инструкция: MinIO, Secret, ручной запуск, восстановление в gitlab-test — см. документацию по бэкапам в репозитории.
+Подробная инструкция: MinIO, Secret, ручной запуск — см. секции ниже в этом README.
 
 **Очистка после бэкапа:**
-- **Временный PVC** (`gitlab-toolbox-backup-tmp`): CronJob `gitlab-toolbox-backup-tmp-cleanup` — манифест `gitlab/gitlab-toolbox-backup-tmp-cleanup.yaml`. Расписание, например, 15:00 UTC.
 - **Старые архивы в S3**: `backup-utility --cleanup` по retention (отдельный CronJob при необходимости).
 
 **Дополнительно (внешние инструменты):**

@@ -1,0 +1,24 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gitlab-s3-cfg
+  namespace: gitlab
+type: Opaque
+stringData:
+  connection: |
+    provider: AWS
+    region: us-east-1
+    aws_access_key_id: <ACCESS_KEY>
+    aws_secret_access_key: <SECRET_KEY>
+    endpoint: https://minio-tenant-hl.minio-operator.svc.cluster.local:9000
+    path_style: true
+  s3cmd: |
+    [default]
+    access_key = <ACCESS_KEY>
+    secret_key = <SECRET_KEY>
+    bucket_location = us-east-1
+    host_base = minio-tenant-hl.minio-operator.svc.cluster.local:9000
+    host_bucket = minio-tenant-hl.minio-operator.svc.cluster.local:9000/%(bucket)
+    use_https = True
+    check_ssl_certificate = False

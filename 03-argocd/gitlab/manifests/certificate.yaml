@@ -1,0 +1,16 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: gitlab-wildcard-tls
+  namespace: gitlab
+spec:
+  secretName: gitlab-wildcard-tls
+  issuerRef:
+    name: lab-home-ca-issuer
+    kind: ClusterIssuer
+  dnsNames:
+    - gitlab.lab-home.com
+  privateKey:
+    # Allow cert-manager to regenerate the private key on mismatch
+    rotationPolicy: Always
