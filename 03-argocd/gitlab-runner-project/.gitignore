@@ -1,0 +1,3 @@
+manifests/gitlab-runner-token.yaml
+manifests/gitlab-runner-cache-s3.yaml
+manifests/gitlab-runner-ca.yaml
