@@ -1,6 +1,4 @@
 ---
-# ArgoCD Application для Prometheus Stack (kube-prometheus-stack)
-# Структура как в harbor и vault: локальный path, values в custom-values
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -11,18 +9,24 @@ metadata:
 spec:
   project: default
 
-  source:
-    repoURL: https://github.com/mistermedved01/lab-home.git
-    path: 03-argocd/prometheus-stack/helm/charts/kube-prometheus-stack-81.6.0
-    targetRevision: main
-    helm:
-      releaseName: prometheus-stack
-      valueFiles:
-        - ../../custom-values/lab-home.yaml
+  sources:
+    - repoURL: https://github.com/mistermedved01/lab-home.git
+      path: 03-argocd/prometheus-stack/manifests
+      targetRevision: main
+    - repoURL: https://github.com/mistermedved01/lab-home.git
+      path: 03-argocd/prometheus-stack/helm/charts/kube-prometheus-stack-81.6.0
+      targetRevision: main
+      helm:
+        releaseName: prometheus-stack
+        valueFiles:
+          - $values/03-argocd/prometheus-stack/helm/custom-values/lab-home.yaml
+    - repoURL: https://github.com/mistermedved01/lab-home.git
+      targetRevision: main
+      ref: values
 
   destination:
     server: https://kubernetes.default.svc
-    namespace: monitoring
+    namespace: prometheus-stack
 
   syncPolicy:
     automated:
