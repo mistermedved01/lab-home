@@ -10,7 +10,8 @@ image:
 
 auth:
   adminUser: admin
-  adminPassword: "ChangeMeAfterInstall"
+  existingSecret: keycloak-admin
+  passwordSecretKey: admin-password
 
 production: false
 tls:

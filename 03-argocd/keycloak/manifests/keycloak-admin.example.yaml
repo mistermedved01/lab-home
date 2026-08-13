@@ -1,0 +1,12 @@
+# Пароль admin Keycloak. Скопировать в keycloak-admin.yaml (gitignored) и заполнить.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: keycloak-admin
+  namespace: keycloak
+  labels:
+    app.kubernetes.io/part-of: keycloak
+    app.kubernetes.io/component: keycloak
+type: Opaque
+stringData:
+  admin-password: "<ADMIN_PASSWORD>"

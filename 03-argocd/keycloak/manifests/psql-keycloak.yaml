@@ -4,6 +4,7 @@ apiVersion: acid.zalan.do/v1
 kind: postgresql
 metadata:
   name: psql-keycloak
+  namespace: keycloak
   labels:
     app.kubernetes.io/part-of: keycloak
     app.kubernetes.io/component: postgresql
