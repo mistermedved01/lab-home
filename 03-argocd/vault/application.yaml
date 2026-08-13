@@ -10,18 +10,31 @@ metadata:
 spec:
   project: default
 
-  source:
-    repoURL: https://github.com/mistermedved01/lab-home.git
-    path: 03-argocd/vault/helm/charts/vault-1.14.0
-    targetRevision: main
-    helm:
-      releaseName: vault
-      valueFiles:
-        - ../../custom-values/lab-home.yaml
+  sources:
+    - repoURL: https://github.com/mistermedved01/lab-home.git
+      path: 03-argocd/vault/manifests
+      targetRevision: main
+    - repoURL: https://github.com/mistermedved01/lab-home.git
+      path: 03-argocd/vault/helm/charts/vault-1.14.0
+      targetRevision: main
+      helm:
+        releaseName: vault
+        valueFiles:
+          - $values/03-argocd/vault/helm/custom-values/lab-home.yaml
+    - repoURL: https://github.com/mistermedved01/lab-home.git
+      targetRevision: main
+      ref: values
 
   destination:
     server: https://kubernetes.default.svc
     namespace: vault
+
+  ignoreDifferences:
+    - group: admissionregistration.k8s.io
+      kind: MutatingWebhookConfiguration
+      name: vault-agent-injector-cfg
+      jsonPointers:
+        - /webhooks/0/clientConfig/caBundle
 
   syncPolicy:
     automated:
@@ -30,6 +43,7 @@ spec:
       allowEmpty: false
     syncOptions:
       - CreateNamespace=true
+      - RespectIgnoreDifferences=true
     retry:
       limit: 5
       backoff:

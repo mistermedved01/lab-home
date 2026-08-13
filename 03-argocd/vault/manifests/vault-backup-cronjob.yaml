@@ -1,0 +1,101 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: vault-backup-cronjob
+  namespace: vault
+  labels:
+    app.kubernetes.io/part-of: vault
+    app.kubernetes.io/component: backup
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  schedule: "0 1 * * *"
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 1
+  successfulJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 3600
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: OnFailure
+          terminationGracePeriodSeconds: 30
+          containers:
+            - name: snapshot
+              image: hashicorp/vault:1.14.0
+              imagePullPolicy: IfNotPresent
+              command: ["/bin/sh", "-ec"]
+              args:
+                - |
+                  JSON=$(vault write auth/approle/login role_id=$VAULT_APPROLE_ROLE_ID secret_id=$VAULT_APPROLE_SECRET_ID -format=json)
+                  export VAULT_TOKEN=$(echo "$JSON" | grep -oE '"client_token"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"\([^"]*\)"$/\1/')
+                  if [ -z "$VAULT_TOKEN" ]; then echo "[ERROR] VAULT_TOKEN empty, approle login failed."; exit 1; fi
+                  vault operator raft snapshot save /share/vault-raft.snap
+                  sha256sum /share/vault-raft.snap > /share/vault-raft.snap.sha256
+                  chmod 644 /share/vault-raft.snap /share/vault-raft.snap.sha256
+                  ls -la /share/
+                  echo "[INFO] Export snapshot completed"
+              envFrom:
+                - secretRef:
+                    name: vault-backup-agent-snapshot-token
+                - configMapRef:
+                    name: vault-backup-configmap
+              volumeMounts:
+                - mountPath: /share
+                  name: share
+                - mountPath: /vault/userconfig/vault-tls
+                  name: userconfig-vault-ca
+            - name: upload
+              image: amazon/aws-cli:2.18.0
+              imagePullPolicy: IfNotPresent
+              command: ["/bin/sh", "-ec"]
+              args:
+                - |
+                  until [ -f /share/vault-raft.snap.sha256 ]; do echo "waiting for /share/vault-raft.snap.sha256" && sleep 5; done
+                  echo "[INFO] Checking sha256..."
+                  sha256sum -c /share/vault-raft.snap.sha256
+                  TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+                  TAG_TYPE=daily
+                  [ "$(date +%u)" -gt 6 ] && TAG_TYPE=weekly
+                  [ "$(date +%d)" = "01" ] && TAG_TYPE=monthly
+                  echo "[INFO] Tag: type=${TAG_TYPE}"
+                  [ -f /certs/ca.crt ] && export AWS_CA_BUNDLE=/certs/ca.crt
+                  case "${S3_URL}" in http://*) unset AWS_CA_BUNDLE ;; esac
+                  echo "[INFO] AWS_CA_BUNDLE=${AWS_CA_BUNDLE:-not set}"
+                  mkdir -p /tmp/aws
+                  export AWS_CONFIG_FILE=/tmp/aws/config
+                  printf '%s\n' '[default]' 's3 =' '  path_style_access = true' > /tmp/aws/config
+                  KEY="${VAULT_DNS_NAME}_${TIMESTAMP}_${TAG_TYPE}.snap"
+                  echo "[INFO] Uploading to s3://${S3_BUCKET}/${KEY}"
+                  if ! aws --endpoint-url "${S3_URL}" s3 ls "s3://${S3_BUCKET}/" 2>&1; then
+                    echo "[ERROR] Cannot list bucket. Check S3_URL, bucket, credentials, MinIO CA."; exit 1
+                  fi
+                  if ! aws --endpoint-url "${S3_URL}" s3 cp /share/vault-raft.snap "s3://${S3_BUCKET}/${KEY}"; then
+                    echo "[ERROR] aws s3 cp failed"; exit 1
+                  fi
+                  aws --endpoint-url "${S3_URL}" s3api put-object-tagging --bucket "${S3_BUCKET}" --key "${KEY}" \
+                    --tagging "TagSet=[{Key=type,Value=${TAG_TYPE}},{Key=Project,Value=${VAULT_DNS_NAME}}]" 2>/dev/null || true
+                  echo "[INFO] Copy snapshot to S3 completed"
+              envFrom:
+                - secretRef:
+                    name: vault-backup-s3-creds
+                - configMapRef:
+                    name: vault-backup-configmap
+              volumeMounts:
+                - mountPath: /share
+                  name: share
+                - mountPath: /certs
+                  name: minio-s3-ca
+          volumes:
+            - emptyDir: {}
+              name: share
+            - secret:
+                secretName: vault-tls
+              name: userconfig-vault-ca
+            - secret:
+                secretName: minio-s3-ca
+                items:
+                  - key: ca.crt
+                    path: ca.crt
+              name: minio-s3-ca

@@ -1,0 +1,13 @@
+# AppRole snapshot-agent. Скопировать в vault-backup-agent-snapshot-token.yaml (gitignored).
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vault-backup-agent-snapshot-token
+  namespace: vault
+  labels:
+    app.kubernetes.io/part-of: vault
+    app.kubernetes.io/component: backup
+type: Opaque
+stringData:
+  VAULT_APPROLE_ROLE_ID: "<ROLE_ID>"
+  VAULT_APPROLE_SECRET_ID: "<SECRET_ID>"

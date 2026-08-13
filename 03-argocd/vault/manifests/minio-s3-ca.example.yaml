@@ -1,0 +1,15 @@
+# CA MinIO Tenant (autoCert). Скопировать в minio-s3-ca.yaml (gitignored) и вставить PEM.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: minio-s3-ca
+  namespace: vault
+  labels:
+    app.kubernetes.io/part-of: vault
+    app.kubernetes.io/component: backup
+type: Opaque
+stringData:
+  ca.crt: |
+    -----BEGIN CERTIFICATE-----
+    <PASTE_minio_tenant_CA_PEM_HERE>
+    -----END CERTIFICATE-----

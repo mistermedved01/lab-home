@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vault-backup-configmap
+  namespace: vault
+  labels:
+    app.kubernetes.io/part-of: vault
+    app.kubernetes.io/component: backup
+data:
+  AWS_CA_BUNDLE: /certs/ca.crt
+  S3_URL: https://minio-tenant-hl.minio-operator.svc.cluster.local:9000
+  S3_BUCKET: vault-backup
+  VAULT_DNS_NAME: vault.lab-home.com
+  VAULT_ADDR: https://vault-active.vault.svc:8200
+  VAULT_CACERT: /vault/userconfig/vault-tls/ca.crt

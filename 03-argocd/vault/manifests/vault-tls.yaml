@@ -1,0 +1,46 @@
+# TLS Vault server (listener 8200 + Raft retry_join). Secret: vault-tls (tls.crt, tls.key, ca.crt).
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: vault-tls
+  namespace: vault
+  labels:
+    app.kubernetes.io/part-of: vault
+    app.kubernetes.io/component: tls
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  secretName: vault-tls
+  duration: 8760h
+  renewBefore: 720h
+  privateKey:
+    rotationPolicy: Always
+  usages:
+    - digital signature
+    - key encipherment
+    - server auth
+    - client auth
+  dnsNames:
+    - vault
+    - vault.vault
+    - vault.vault.svc
+    - vault.vault.svc.cluster.local
+    - vault-active
+    - vault-active.vault
+    - vault-active.vault.svc
+    - vault-active.vault.svc.cluster.local
+    - vault-internal
+    - vault-internal.vault.svc
+    - vault-internal.vault.svc.cluster.local
+    - vault-0.vault-internal
+    - vault-0.vault-internal.vault.svc
+    - vault-0.vault-internal.vault.svc.cluster.local
+    - vault-1.vault-internal
+    - vault-2.vault-internal
+    - vault.lab-home.com
+    - localhost
+  ipAddresses:
+    - 127.0.0.1
+  issuerRef:
+    name: lab-home-ca-issuer
+    kind: ClusterIssuer

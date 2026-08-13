@@ -1,0 +1,14 @@
+# Ключи MinIO для bucket vault-backup. Скопировать в vault-backup-s3-creds.yaml (gitignored).
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vault-backup-s3-creds
+  namespace: vault
+  labels:
+    app.kubernetes.io/part-of: vault
+    app.kubernetes.io/component: backup
+type: Opaque
+stringData:
+  AWS_ACCESS_KEY_ID: minioadmin
+  AWS_SECRET_ACCESS_KEY: "ChangeMe"
+  AWS_DEFAULT_REGION: minio
