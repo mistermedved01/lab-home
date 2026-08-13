@@ -37,7 +37,7 @@ kubectl exec -it vault-0 -n vault -- vault operator unseal '<Unseal Key>'
 kubectl exec -it vault-0 -n vault -- vault status
 ```
 
-UI: https://vault.lab-home.com
+UI: <https://vault.lab-home.com>
 
 ## 4. AppRole для бэкапа + секрет
 
