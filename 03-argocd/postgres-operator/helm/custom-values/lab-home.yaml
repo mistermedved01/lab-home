@@ -1,0 +1,32 @@
+# Zalando Postgres Operator values для lab-home
+# Чарт: helm/charts/postgres-operator-1.13.0
+
+configTarget: OperatorConfigurationCRD
+
+configGeneral:
+  docker_image: ghcr.io/zalando/spilo-16:3.3-p3
+  enable_crd_registration: true
+  workers: 4
+
+configKubernetes:
+  watched_namespace: "*"
+  # Env для WAL-G на все Postgres-кластеры (см. manifests/postgres-pod-config.yaml)
+  pod_environment_configmap: "postgres-operator/postgres-pod-config"
+  # Secret с AWS-ключами должен лежать в namespace кластера (keycloak)
+  pod_environment_secret: "postgres-pod-secrets"
+  enable_pod_antiaffinity: false
+  storage_resize_mode: pvc
+
+configPostgresPodResources:
+  default_cpu_request: 100m
+  default_memory_request: 256Mi
+  default_cpu_limit: "1"
+  default_memory_limit: 1Gi
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 100Mi
+  limits:
+    cpu: 500m
+    memory: 500Mi

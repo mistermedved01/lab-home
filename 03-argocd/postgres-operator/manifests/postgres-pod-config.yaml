@@ -1,0 +1,26 @@
+# Env для Spilo/WAL-G. Секреты S3 — в Secret postgres-pod-secrets (namespace кластера).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-pod-config
+  namespace: postgres-operator
+  labels:
+    app.kubernetes.io/name: postgres-operator
+    app.kubernetes.io/part-of: lab-home
+data:
+  USE_WALG_BACKUP: "true"
+  USE_WALG_RESTORE: "true"
+  AWS_ENDPOINT: "https://minio-tenant-hl.minio-operator.svc.cluster.local:9000"
+  AWS_S3_FORCE_PATH_STYLE: "true"
+  AWS_REGION: "minio"
+  WAL_S3_BUCKET: "postgresql-lab-home-backup"
+  WALG_DISABLE_S3_SSE: "true"
+  BACKUP_SCHEDULE: "00 00 * * *"
+  BACKUP_NUM_TO_RETAIN: "3"
+  AWS_CA_BUNDLE: "/etc/ssl/minio/ca.crt"
+  # Готовность к clone/restore (тот же bucket/endpoint)
+  CLONE_METHOD: "CLONE_WITH_WALE"
+  CLONE_USE_WALG_RESTORE: "true"
+  CLONE_AWS_ENDPOINT: "https://minio-tenant-hl.minio-operator.svc.cluster.local:9000"
+  CLONE_AWS_S3_FORCE_PATH_STYLE: "true"
+  CLONE_WAL_S3_BUCKET: "postgresql-lab-home-backup"
