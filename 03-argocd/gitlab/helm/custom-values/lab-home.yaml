@@ -12,7 +12,6 @@ prometheus:
 registry:
   enabled: false
 
-# Runner вынесен в 03-argocd/gitlab-runner (ns gitlab-runner)
 gitlab-runner:
   install: false
 
