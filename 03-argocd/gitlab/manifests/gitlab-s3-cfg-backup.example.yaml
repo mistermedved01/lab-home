@@ -1,0 +1,19 @@
+---
+# Отдельный S3-конфиг для backup-utility --s3config (как s3-cfg-backup на проде).
+# В lab-home credentials те же, что у gitlab-s3-cfg; на проде может быть другой endpoint/bucket.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gitlab-s3-cfg-backup
+  namespace: gitlab
+type: Opaque
+stringData:
+  s3cmd: |
+    [default]
+    access_key = <ACCESS_KEY>
+    secret_key = <SECRET_KEY>
+    bucket_location = us-east-1
+    host_base = minio.lab-home.com
+    host_bucket = minio.lab-home.com/%(bucket)
+    use_https = True
+    check_ssl_certificate = False
