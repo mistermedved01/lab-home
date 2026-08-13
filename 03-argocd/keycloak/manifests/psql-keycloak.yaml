@@ -20,7 +20,7 @@ spec:
       log_destination: stderr
       logging_collector: "off"
   volume:
-    size: 10Gi
+    size: 1Gi
     storageClass: topolvm-provisioner
   users:
     bn_keycloak:
