@@ -30,12 +30,12 @@ server:
   auditStorage:
     enabled: true
     mountPath: /vault/audit
-    size: 10Gi
+    size: 1Gi
     storageClass: topolvm-provisioner
   dataStorage:
     enabled: true
     mountPath: /vault/data
-    size: 10Gi
+    size: 1Gi
     storageClass: topolvm-provisioner
   enabled: true
   extraEnvironmentVars:
