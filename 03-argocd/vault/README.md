@@ -2,14 +2,6 @@
 
 Raft, 1 реплика. Внутренний TLS и Ingress — cert-manager (`lab-home-ca-issuer`). CronJob бэкапа в том же Argo Application.
 
-Argo берёт манифесты с **GitHub `main`**. Пока изменения не запушены, кластер поднимет старый Vault с preconfigure.
-
-## 0. Запушить в `main`
-
-`03-argocd/vault/` (манифесты, values, Application) и правки `03-argocd/.gitignore` / `03-argocd/README.md`.
-
-Дальше по кластеру. cert-manager, TopoLVM, MinIO, nginx уже должны быть.
-
 ## 1. Namespace + секреты бэкапа
 
 Argo секреты не создаёт. CronJob без них будет Unhealthy, но Vault поднимется.
