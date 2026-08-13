@@ -12,42 +12,9 @@ prometheus:
 registry:
   enabled: false
 
+# Runner вынесен в 03-argocd/gitlab-runner (ns gitlab-runner)
 gitlab-runner:
-  install: true
-  rbac:
-    create: true
-  hostAliases:
-    - ip: "192.168.7.240"
-      hostnames:
-        - gitlab.lab-home.com
-        - harbor.lab-home.com
-  certsSecretName: gitlab-runner-ca
-  concurrent: 3
-  runners:
-    locked: false
-    runUntagged: true
-    tags: "lab-home,kubernetes"
-    secret: "nonempty"
-    config: |
-      [[runners]]
-        [runners.kubernetes]
-        namespace = "gitlab"
-        image = "ubuntu:22.04"
-        cpu_request = "100m"
-        memory_request = "256Mi"
-        cpu_limit = "1"
-        memory_limit = "2Gi"
-        poll_timeout = 600
-        [[runners.kubernetes.host_aliases]]
-          ip = "192.168.7.240"
-          hostnames = ["gitlab.lab-home.com", "harbor.lab-home.com"]
-  resources:
-    requests:
-      cpu: 100m
-      memory: 128Mi
-    limits:
-      cpu: 500m
-      memory: 512Mi
+  install: false
 
 global:
   registry:
