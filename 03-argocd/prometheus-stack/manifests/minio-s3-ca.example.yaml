@@ -1,0 +1,16 @@
+# CA MinIO Tenant для WAL-G / AWS SDK в подах Spilo (HTTPS S3).
+# Скопировать в minio-s3-ca.yaml (gitignored) и вставить PEM.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: minio-s3-ca
+  namespace: prometheus-stack
+  labels:
+    app.kubernetes.io/part-of: prometheus-stack
+    app.kubernetes.io/component: postgresql
+type: Opaque
+stringData:
+  ca.crt: |
+    -----BEGIN CERTIFICATE-----
+    <PASTE_minio_tenant_CA_PEM_HERE>
+    -----END CERTIFICATE-----
