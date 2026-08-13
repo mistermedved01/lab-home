@@ -1,6 +1,3 @@
-# kube-prometheus-stack values для окружения lab-home (чарт helm/charts/kube-prometheus-stack-81.6.0)
-# См. application.yaml: path=helm/charts/kube-prometheus-stack-81.6.0, valueFiles=../../custom-values/lab-home.yaml
-
 cleanPrometheusOperatorObjectNames: true
 
 prometheusOperator:
@@ -15,7 +12,7 @@ prometheus:
     enabled: true
     ingressClassName: nginx
     annotations:
-      cert-manager.io/cluster-issuer: "selfsigned-issuer"
+      cert-manager.io/cluster-issuer: "lab-home-ca-issuer"
       nginx.ingress.kubernetes.io/ssl-redirect: "true"
       nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
     hosts:
@@ -28,12 +25,18 @@ prometheus:
           - prometheus.lab-home.com
   prometheusSpec:
     replicas: 1
-    retention: 1d
+    retention: 7d
     podMonitorSelectorNilUsesHelmValues: false
     ruleSelectorNilUsesHelmValues: false
     serviceMonitorSelectorNilUsesHelmValues: false
     storageSpec:
-      emptyDir: {}
+      volumeClaimTemplate:
+        spec:
+          storageClassName: topolvm-provisioner
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 2Gi
     resources:
       requests:
         memory: "512Mi"
@@ -46,8 +49,15 @@ alertmanager:
   enabled: true
   alertmanagerSpec:
     replicas: 1
+    retention: 120h
     storage:
-      emptyDir: {}
+      volumeClaimTemplate:
+        spec:
+          storageClassName: topolvm-provisioner
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 1Gi
     resources:
       requests:
         memory: "256Mi"
@@ -59,7 +69,23 @@ alertmanager:
 grafana:
   enabled: true
   replicas: 1
-  adminPassword: admin
+  admin:
+    existingSecret: grafana-admin
+    userKey: admin-user
+    passwordKey: admin-password
+  # SQLite выключен: БД из manifests/psql-grafana.yaml (Postgres Operator)
+  grafana.ini:
+    database:
+      type: postgres
+      host: psql-grafana:5432
+      name: grafana
+      user: grafana
+      ssl_mode: require
+  envValueFrom:
+    GF_DATABASE_PASSWORD:
+      secretKeyRef:
+        name: grafana.psql-grafana.credentials.postgresql.acid.zalan.do
+        key: password
   service:
     type: ClusterIP
   resources:
@@ -73,7 +99,7 @@ grafana:
     enabled: true
     ingressClassName: nginx
     annotations:
-      cert-manager.io/cluster-issuer: "selfsigned-issuer"
+      cert-manager.io/cluster-issuer: "lab-home-ca-issuer"
       nginx.ingress.kubernetes.io/ssl-redirect: "true"
       nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
     hosts:
