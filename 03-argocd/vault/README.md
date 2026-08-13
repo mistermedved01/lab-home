@@ -10,8 +10,10 @@ Argo секреты не создаёт. CronJob без них будет Unheal
 kubectl create namespace vault --dry-run=client -o yaml | kubectl apply -f -
 
 # если ещё нет локальных файлов — скопировать из example и заполнить
-kubectl apply -f 03-argocd/vault/manifests/minio-s3-ca.yaml
-kubectl apply -f 03-argocd/vault/manifests/vault-backup-s3-creds.yaml
+# CA = kube-root-ca (MinIO TLS через Kubernetes CSR), не public.crt тенанта
+kubectl apply -f 03-argocd/vault/manifests/backup/minio-s3-ca.yaml
+# ключи как у Tenant: minioadmin / minioadmin123
+kubectl apply -f 03-argocd/vault/manifests/backup/vault-backup-s3-creds.yaml
 # AppRole-секрет — после init, шаг 4; пока можно не трогать
 ```
 
@@ -53,10 +55,10 @@ vault read auth/approle/role/snapshot-agent/role-id
 vault write -f auth/approle/role/snapshot-agent/secret-id
 ```
 
-Вписать role_id/secret_id в `vault-backup-agent-snapshot-token.yaml` и:
+Вписать role_id/secret_id в `manifests/backup/vault-backup-agent-snapshot-token.yaml` и:
 
 ```bash
-kubectl apply -f 03-argocd/vault/manifests/vault-backup-agent-snapshot-token.yaml
+kubectl apply -f 03-argocd/vault/manifests/backup/vault-backup-agent-snapshot-token.yaml
 ```
 
 ## 5. Проверить бэкап

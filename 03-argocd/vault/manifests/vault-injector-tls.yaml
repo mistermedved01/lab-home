@@ -1,5 +1,3 @@
-# TLS Vault Agent Injector webhook. Secret: vault-injector-tls.
-# caBundle в MutatingWebhookConfiguration пишет cert-manager (inject-ca-from).
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:

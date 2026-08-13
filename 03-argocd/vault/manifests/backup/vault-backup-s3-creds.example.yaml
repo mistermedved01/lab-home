@@ -1,4 +1,3 @@
-# Ключи MinIO для bucket vault-backup. Скопировать в vault-backup-s3-creds.yaml (gitignored).
 apiVersion: v1
 kind: Secret
 metadata:

@@ -1,4 +1,3 @@
-# TLS Vault server (listener 8200 + Raft retry_join). Secret: vault-tls (tls.crt, tls.key, ca.crt).
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:

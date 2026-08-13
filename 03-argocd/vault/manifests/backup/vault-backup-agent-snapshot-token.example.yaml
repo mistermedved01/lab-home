@@ -1,4 +1,3 @@
-# AppRole snapshot-agent. Скопировать в vault-backup-agent-snapshot-token.yaml (gitignored).
 apiVersion: v1
 kind: Secret
 metadata:

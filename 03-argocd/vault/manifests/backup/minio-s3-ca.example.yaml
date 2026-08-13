@@ -1,4 +1,3 @@
-# CA MinIO Tenant (autoCert). Скопировать в minio-s3-ca.yaml (gitignored) и вставить PEM.
 apiVersion: v1
 kind: Secret
 metadata:
