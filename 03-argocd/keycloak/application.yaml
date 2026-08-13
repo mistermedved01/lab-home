@@ -1,0 +1,45 @@
+---
+# ArgoCD Application: Keycloak + Zalando PostgreSQL (psql-keycloak)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: keycloak
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  sources:
+    - repoURL: https://github.com/mistermedved01/lab-home.git
+      path: 03-argocd/keycloak/manifests
+      targetRevision: main
+    - repoURL: https://github.com/mistermedved01/lab-home.git
+      path: 03-argocd/keycloak/helm/charts/keycloak-25.2.0
+      targetRevision: main
+      helm:
+        releaseName: keycloak
+        valueFiles:
+          - $values/03-argocd/keycloak/helm/custom-values/lab-home.yaml
+    - repoURL: https://github.com/mistermedved01/lab-home.git
+      targetRevision: main
+      ref: values
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: keycloak
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m

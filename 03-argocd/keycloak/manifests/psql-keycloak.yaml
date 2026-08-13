@@ -1,0 +1,49 @@
+# Zalando PostgreSQL для Keycloak.
+# Lab: 1 инстанс; WAL-G → MinIO bucket postgresql-lab-home-backup.
+apiVersion: acid.zalan.do/v1
+kind: postgresql
+metadata:
+  name: psql-keycloak
+  labels:
+    app.kubernetes.io/part-of: keycloak
+    app.kubernetes.io/component: postgresql
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  teamId: "lab"
+  numberOfInstances: 1
+  dockerImage: ghcr.io/zalando/spilo-16:3.3-p3
+  postgresql:
+    version: "16"
+    parameters:
+      shared_buffers: 256MB
+      log_destination: stderr
+      logging_collector: "off"
+  volume:
+    size: 10Gi
+    storageClass: topolvm-provisioner
+  users:
+    bn_keycloak:
+      - superuser
+      - createdb
+  databases:
+    bitnami_keycloak: bn_keycloak
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+  # CA MinIO для HTTPS S3 (WAL-G)
+  additionalVolumes:
+    - name: minio-ca
+      mountPath: /etc/ssl/minio
+      targetContainers:
+        - postgres
+      volumeSource:
+        secret:
+          secretName: minio-s3-ca
+          items:
+            - key: ca.crt
+              path: ca.crt

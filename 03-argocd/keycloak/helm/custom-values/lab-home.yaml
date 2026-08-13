@@ -1,0 +1,61 @@
+# Keycloak values для lab-home. Чарт: helm/charts/keycloak-25.2.0
+# Keycloak → внешний Zalando/Spilo (psql-keycloak), WAL-G → MinIO.
+
+# Bitnami public registry ограничен с Aug 2025 — используем bitnamilegacy
+image:
+  registry: docker.io
+  repository: bitnamilegacy/keycloak
+  tag: 26.3.3-debian-12-r0
+  pullPolicy: IfNotPresent
+
+auth:
+  adminUser: admin
+  adminPassword: "ChangeMeAfterInstall"
+
+production: false
+tls:
+  enabled: false
+httpEnabled: true
+proxyHeaders: "xforwarded"
+hostnameStrict: true
+
+replicaCount: 1
+
+ingress:
+  enabled: true
+  hostname: keycloak.lab-home.com
+  ingressClassName: nginx
+  path: /
+  servicePort: http
+  annotations:
+    cert-manager.io/cluster-issuer: "lab-home-ca-issuer"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    argocd.argoproj.io/sync-wave: "2"
+  tls: true
+
+resources:
+  requests:
+    memory: "512Mi"
+    cpu: "250m"
+  limits:
+    memory: "1Gi"
+    cpu: "1000m"
+
+# Встроенный Bitnami PostgreSQL выключен — БД из manifests/psql-keycloak.yaml
+postgresql:
+  enabled: false
+
+externalDatabase:
+  host: psql-keycloak
+  port: 5432
+  user: bn_keycloak
+  database: bitnami_keycloak
+  schema: public
+  # Secret создаёт postgres-operator (underscore в user → hyphen в имени secret)
+  existingSecret: bn-keycloak.psql-keycloak.credentials.postgresql.acid.zalan.do
+  existingSecretUserKey: username
+  existingSecretPasswordKey: password
+  # Spilo по умолчанию слушает SSL
+  extraParams: "&sslmode=require"
