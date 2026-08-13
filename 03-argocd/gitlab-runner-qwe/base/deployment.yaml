@@ -1,0 +1,115 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gitlab-runner
+  namespace: gitlab-runner-qwe
+  labels:
+    app: gitlab-runner-qwe
+    environment: qwe
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gitlab-runner-qwe
+      environment: qwe
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 50%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: gitlab-runner-qwe
+        environment: qwe
+    spec:
+      serviceAccountName: gitlab-runner
+      terminationGracePeriodSeconds: 3600
+
+      hostAliases:
+        - ip: "192.168.7.240"
+          hostnames:
+            - gitlab.lab-home.com
+            - harbor.lab-home.com
+
+      securityContext:
+        fsGroup: 999
+
+      containers:
+        - name: gitlab-runner
+          image: registry.gitlab.com/gitlab-org/gitlab-runner:alpine-v17.10.1
+          imagePullPolicy: IfNotPresent
+
+          securityContext:
+            allowPrivilegeEscalation: false
+
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+              mkdir -p /home/gitlab-runner/.gitlab-runner
+              cp /config-template/config.toml.template /home/gitlab-runner/.gitlab-runner/config.toml
+              sed -i "s|__RUNNER_TOKEN__|${RUNNER_TOKEN}|g" /home/gitlab-runner/.gitlab-runner/config.toml
+              sed -i "s|__CACHE_S3_ACCESS_KEY__|${CACHE_S3_ACCESS_KEY}|g" /home/gitlab-runner/.gitlab-runner/config.toml
+              sed -i "s|__CACHE_S3_SECRET_KEY__|${CACHE_S3_SECRET_KEY}|g" /home/gitlab-runner/.gitlab-runner/config.toml
+              exec /usr/bin/gitlab-runner run \
+                --working-directory=/home/gitlab-runner \
+                --config=/home/gitlab-runner/.gitlab-runner/config.toml \
+                --service=gitlab-runner \
+                --user=gitlab-runner
+
+          env:
+            - name: RUNNER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: gitlab-runner-token
+                  key: runner-token
+
+            - name: CACHE_S3_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: gitlab-runner-cache-s3
+                  key: accesskey
+
+            - name: CACHE_S3_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: gitlab-runner-cache-s3
+                  key: secretkey
+
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
+          volumeMounts:
+            - name: config-template
+              mountPath: /config-template
+              readOnly: true
+
+            - name: runner-home
+              mountPath: /home/gitlab-runner/.gitlab-runner
+
+            - name: ca-bundle
+              mountPath: /home/gitlab-runner/.gitlab-runner/certs/lab-home-root-ca.crt
+              subPath: lab-home-root-ca.crt
+              readOnly: true
+
+      volumes:
+        - name: config-template
+          configMap:
+            name: gitlab-runner-config
+
+        - name: runner-home
+          emptyDir: {}
+
+        - name: ca-bundle
+          secret:
+            secretName: gitlab-runner-ca
+            items:
+              - key: lab-home-root-ca.crt
+                path: lab-home-root-ca.crt

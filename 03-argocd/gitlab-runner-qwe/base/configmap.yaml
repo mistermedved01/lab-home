@@ -1,0 +1,86 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gitlab-runner-config
+  namespace: gitlab-runner-qwe
+  labels:
+    app: gitlab-runner-qwe
+    environment: qwe
+data:
+  # Плейсхолдеры __RUNNER_TOKEN__ / __CACHE_S3_*__ подставляет entrypoint Deployment из Secret'ов.
+  config.toml.template: |
+    concurrent = 3
+    check_interval = 3
+    shutdown_timeout = 0
+
+    [[runners]]
+      name = "qwe"
+      limit = 3
+      url = "https://gitlab.lab-home.com"
+      token = "__RUNNER_TOKEN__"
+      executor = "kubernetes"
+      tls-ca-file = "/home/gitlab-runner/.gitlab-runner/certs/lab-home-root-ca.crt"
+
+      environment = [
+        "SSL_CERT_FILE=/etc/gitlab-runner/certs/lab-home-root-ca.crt",
+        "REQUESTS_CA_BUNDLE=/etc/gitlab-runner/certs/lab-home-root-ca.crt",
+        "CURL_CA_BUNDLE=/etc/gitlab-runner/certs/lab-home-root-ca.crt",
+        "AWS_CA_BUNDLE=/etc/gitlab-runner/certs/lab-home-root-ca.crt",
+        "FF_USE_FASTZIP=true",
+        "CACHE_COMPRESSION_FORMAT=tarzstd",
+        "CACHE_COMPRESSION_LEVEL=fast",
+        "TRANSFER_METER_FREQUENCY=5s"
+      ]
+
+      [runners.cache]
+        Type = "s3"
+        Path = "gitlab-runner-cache/qwe"
+        Shared = true
+        MaxUploadedArchiveSize = 5368709120
+
+        [runners.cache.s3]
+          ServerAddress = "minio.lab-home.com"
+          BucketName = "gitlab-lab-home-runner-cache"
+          BucketLocation = "minio"
+          Insecure = false
+          AuthenticationType = "access-key"
+          PathStyle = true
+          AccessKey = "__CACHE_S3_ACCESS_KEY__"
+          SecretKey = "__CACHE_S3_SECRET_KEY__"
+
+      [runners.kubernetes]
+        namespace = "gitlab-runner-qwe"
+        service_account = "gitlab-runner"
+
+        image = "ubuntu:22.04"
+
+        pull_policy = "always"
+        privileged = false
+        poll_timeout = 600
+
+        cpu_request = "100m"
+        cpu_request_overwrite_max_allowed = "2000m"
+        cpu_limit = "1"
+        cpu_limit_overwrite_max_allowed = "2000m"
+
+        memory_request = "256Mi"
+        memory_request_overwrite_max_allowed = "4Gi"
+        memory_limit = "2Gi"
+        memory_limit_overwrite_max_allowed = "4Gi"
+
+        helper_cpu_request = "50m"
+        helper_cpu_limit = "500m"
+        helper_memory_request = "128Mi"
+        helper_memory_limit = "512Mi"
+
+        [runners.kubernetes.pod_labels]
+          "runnerName" = "qwe"
+
+        [[runners.kubernetes.host_aliases]]
+          ip = "192.168.7.240"
+          hostnames = ["gitlab.lab-home.com", "harbor.lab-home.com"]
+
+        [[runners.kubernetes.volumes.secret]]
+          name = "gitlab-runner-ca"
+          mount_path = "/etc/gitlab-runner/certs"
+          read_only = true

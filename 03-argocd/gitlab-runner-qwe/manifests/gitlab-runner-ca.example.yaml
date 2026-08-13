@@ -1,0 +1,12 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gitlab-runner-ca
+  namespace: gitlab-runner-qwe
+type: Opaque
+stringData:
+  lab-home-root-ca.crt: |
+    -----BEGIN CERTIFICATE-----
+    <PASTE_lab-home-root-ca_PEM_HERE>
+    -----END CERTIFICATE-----

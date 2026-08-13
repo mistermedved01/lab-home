@@ -1,0 +1,10 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gitlab-runner-token
+  namespace: gitlab-runner-qwe
+type: Opaque
+stringData:
+  # Токен из GitLab UI: Admin/Group/Project → CI/CD → Runners → New runner (glrt-…)
+  runner-token: "glrt-REPLACE_ME"
