@@ -1,0 +1,3 @@
+manifests/secrets/vault-backup-s3-creds.yaml
+manifests/secrets/vault-backup-agent-snapshot-token.yaml
+manifests/secrets/minio-s3-ca.yaml

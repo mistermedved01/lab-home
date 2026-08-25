@@ -48,10 +48,10 @@ controller:
   resources:
     requests:
       cpu: 250m
-      memory: 256Mi
-    limits:
-      cpu: 500m
       memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
 
 # Настройки repo server
 repoServer:
@@ -59,10 +59,10 @@ repoServer:
   resources:
     requests:
       cpu: 100m
-      memory: 128Mi
+      memory: 256Mi
     limits:
       cpu: 500m
-      memory: 256Mi
+      memory: 1Gi
 
 # Настройки applicationSet controller
 applicationSet:
