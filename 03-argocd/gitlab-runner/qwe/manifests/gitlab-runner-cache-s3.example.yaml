@@ -1,0 +1,10 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gitlab-runner-cache-s3
+  namespace: gitlab-runner-qwe
+type: Opaque
+stringData:
+  accesskey: "<ACCESS_KEY>"
+  secretkey: "<SECRET_KEY>"
