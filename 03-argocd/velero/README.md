@@ -1,29 +1,59 @@
-# Velero (ArgoCD Application)
+# Velero
 
-Каталог содержит ArgoCD Application для развёртывания [Velero](https://velero.io/) в кластере Kubernetes. Velero выполняет резервное копирование и восстановление ресурсов кластера. Бэкапы сохраняются в MinIO (S3-совместимое хранилище).
+Velero выполняет резервное копирование и восстановление ресурсов Kubernetes: Namespace, Deployment, ConfigMap, Secret, PVC и других объектов. Резервные копии хранятся в объектном хранилище MinIO.
 
-## Зачем нужен Velero
+Схема:
 
-- **Бэкап всего кластера** — namespaces, Deployments, ConfigMaps, Secrets, PVC и т.д.
-- **Восстановление** — перенос в другой кластер или откат после сбоя.
-- **Миграции** — перенос приложений между кластерами.
-- **Расписание** — автоматические бэкапы по расписанию (Schedule).
+- Velero (Helm) + plugin AWS (`velero-plugin-for-aws`)
+- Object storage — MinIO S3 (`minio-tenant-hl…:9000`)
+- Node Agent — file-level backup томов (`defaultVolumesToFsBackup: true`)
+- CSI volume snapshots — **выключены**
+- Secret с S3-кредами — `kubectl` (не Argo)
+
+| Параметр | Значение |
+| --- | --- |
+| Namespace | `velero` |
+| Chart | `helm/charts/velero-8.6.0` (app `1.15.2`) |
+| S3 endpoint | `https://minio-tenant-hl.minio-operator.svc.cluster.local:9000` |
+| BSL `default` | bucket `velero-backup` |
+| BSL `dev` | bucket `data-backup-dev` (restore) |
+| Credentials | Secret `velero-cloud-credentials` (ключ `cloud`) |
+| Node Agent | включён |
+| Snapshots | `snapshotsEnabled: false` |
+| TLS к MinIO | `insecureSkipTLSVerify: "true"` (self-signed lab) |
+
+Argo синкает **только Helm**. Secret `velero-cloud-credentials` **не** входит в Application — его нет в кластере, пока не примените вручную.
 
 ## Предварительные требования
 
-1. **MinIO** развёрнут (Operator + Tenant), доступен внутри кластера по адресу `minio-tenant-hl.minio-operator.svc.cluster.local:9000`.
-2. **Bucket для Velero** создан в MinIO (например, `velero-backup`).
-3. **Учётные данные S3** — Access Key и Secret Key с доступом к этому bucket (можно использовать те же, что для Vault backup, или отдельного пользователя MinIO).
+1. MinIO Tenant (Operator + Tenant)
+2. Bucket **`velero-backup`** в MinIO (для default BSL)
+3. Access Key / Secret Key с доступом к bucket’ам Velero
+4. (опционально) bucket `data-backup-dev` — если нужна локация `dev`
 
-## Быстрый старт
+## Структура
 
-### 1. Создать bucket в MinIO
+```text
+velero/
+├── application.yaml
+├── manifests/
+│   ├── velero-cloud-credentials-secret.example.yaml  # kubectl (не Argo)
+│   └── velero-cloud-credentials-secret.yaml          # gitignored
+├── helm/
+│   ├── charts/velero-8.6.0/
+│   └── custom-values/lab-home.yaml
+└── README.md
+```
 
-В MinIO Console создайте bucket с именем `velero-backup` (или измените `configuration.backupStorageLocation[0].bucket` в `helm/custom-values/lab-home.yaml`).
+## Развёртывание
 
-### 2. Создать Secret с кредами для S3
+### 1) Bucket в MinIO
 
-Velero ожидает секрет в формате AWS credentials. В namespace `velero` должен быть Secret с ключом `cloud` и значением в формате:
+В MinIO Console создать bucket `velero-backup` (или поменять имя в `helm/custom-values/lab-home.yaml`).
+
+### 2) Secret с S3-кредами
+
+Формат ключа `cloud` — AWS credentials:
 
 ```ini
 [default]
@@ -31,13 +61,21 @@ aws_access_key_id=<ACCESS_KEY>
 aws_secret_access_key=<SECRET_KEY>
 ```
 
-**Пример из файла (без коммита в Git):**
-
 ```bash
 kubectl create namespace velero --dry-run=client -o yaml | kubectl apply -f -
 
-# Файл credentials-velero (не коммитить!)
-cat > credentials-velero << 'EOF'
+cp 03-argocd/velero/manifests/velero-cloud-credentials-secret.example.yaml \
+   03-argocd/velero/manifests/velero-cloud-credentials-secret.yaml
+# вписать ACCESS_KEY / SECRET_KEY, затем:
+kubectl apply -f 03-argocd/velero/manifests/velero-cloud-credentials-secret.yaml
+```
+
+Файл с реальными ключами в `.gitignore`, не коммитить.
+
+Без файла в репо:
+
+```bash
+cat > /tmp/credentials-velero <<'EOF'
 [default]
 aws_access_key_id=ВАШ_ACCESS_KEY
 aws_secret_access_key=ВАШ_SECRET_KEY
@@ -45,46 +83,38 @@ EOF
 
 kubectl create secret generic velero-cloud-credentials \
   --namespace velero \
-  --from-file=cloud=credentials-velero
+  --from-file=cloud=/tmp/credentials-velero
+rm -f /tmp/credentials-velero
 ```
 
-### 3. Применить ArgoCD Application
+### 3) ArgoCD Application
 
 ```bash
 kubectl apply -f 03-argocd/velero/application.yaml
+kubectl -n argocd get application velero
+kubectl get pods,backupstoragelocation -n velero
 ```
 
-### 4. Проверить развёртывание
+Дождаться Running у `velero-…` и Node Agent DaemonSet, Ready у BackupStorageLocation `default`.
 
-```bash
-kubectl get pods -n velero
-kubectl get backupstoragelocation -n velero
-velero backup location get   # если установлен velero CLI
-```
+## BackupStorageLocation
 
-## Конфигурация
+| Name | Bucket | Default |
+| --- | --- | --- |
+| `default` | `velero-backup` | да |
+| `dev` | `data-backup-dev` | нет |
 
-Values задаются в `helm/custom-values/lab-home.yaml`.
+Обе смотрят на один MinIO endpoint и один Secret `velero-cloud-credentials`.
 
-| Параметр | Значение | Описание |
-|----------|----------|----------|
-| **Хранилище** | MinIO S3 | `minio-tenant-hl.minio-operator.svc.cluster.local:9000` |
-| **Bucket** | `velero-backup` | Имя bucket в MinIO |
-| **Секрет** | `velero-cloud-credentials` | Secret с ключом `cloud` (AWS-формат) |
-| **Node Agent** | включён | Резервное копирование томов (PV) через file-level backup |
-| **Volume snapshots** | выключены | Для local-path нет CSI snapshot; используется fs backup |
+## Schedule
 
-При использовании self-signed сертификата MinIO задано `insecureSkipTLSVerify: "true"`. Для production при корректном TLS можно убрать эту опцию в custom-values.
-
-## Расписание бэкапов (Schedule)
-
-После установки создайте Schedule, например ежедневный бэкап в 02:00:
+После установки, например ежедневный бэкап в 02:00:
 
 ```bash
 velero schedule create daily-backup --schedule="0 2 * * *" --ttl=72h0m0s
 ```
 
-Или через манифест:
+Или манифестом:
 
 ```yaml
 apiVersion: velero.io/v1
@@ -98,37 +128,68 @@ spec:
     ttl: 72h
 ```
 
+Schedule в Application **не** зашит — создаётся вручную при необходимости.
+
+## Проверка
+
+```bash
+kubectl get pods -n velero
+kubectl get backupstoragelocation -n velero
+kubectl get secret velero-cloud-credentials -n velero
+```
+
+CLI локально или из пода (бинарь `/velero`, не в PATH). При self-signed MinIO для команд к object storage добавьте `--insecure-skip-tls-verify`:
+
+```bash
+VELERO_POD=$(kubectl get pods -n velero -l name=velero \
+  --field-selector=status.phase=Running -o jsonpath='{.items[0].metadata.name}')
+
+kubectl exec "$VELERO_POD" -n velero -- /velero version
+kubectl exec "$VELERO_POD" -n velero -- /velero backup get
+kubectl exec "$VELERO_POD" -n velero -- /velero backup location get
+```
+
 ## Полезные команды
 
 ```bash
-# Список бэкапов
+# список бэкапов (default)
 velero backup get
 
-# Разовый бэкап
+# разовый бэкап
 velero backup create manual-backup-$(date +%Y%m%d)
 
-# Описание бэкапа
-velero backup describe <BACKUP_NAME>
+# описание / логи (с insecure для MinIO lab)
+velero backup describe <BACKUP_NAME> --insecure-skip-tls-verify
+velero backup logs <BACKUP_NAME> --insecure-skip-tls-verify
 
-# Восстановление из бэкапа
+# restore
 velero restore create --from-backup <BACKUP_NAME>
 ```
 
-## Структура
+Из локации `dev`:
 
-```
-velero/
-├── application.yaml              # ArgoCD Application
-├── helm/
-│   ├── charts/
-│   │   └── velero-8.6.0/         # Helm chart (vmware-tanzu/velero)
-│   └── custom-values/
-│       └── lab-home.yaml         # Values для MinIO S3
-└── README.md
+```bash
+velero backup get --storage-location dev
+velero restore create --from-backup <BACKUP_NAME> --storage-location dev
 ```
 
-## Ссылки
+## Частые проблемы
 
-- [Velero Documentation](https://velero.io/docs/)
-- [Velero Helm Chart](https://github.com/vmware-tanzu/helm-charts/tree/main/charts/velero)
-- [Velero Plugin for AWS](https://github.com/vmware-tanzu/velero-plugin-for-aws) (S3/MinIO)
+```bash
+# BSL не Available
+kubectl describe backupstoragelocation default -n velero
+kubectl logs -n velero -l app.kubernetes.io/name=velero
+
+# нет Secret → Velero не достучится до MinIO
+kubectl get secret velero-cloud-credentials -n velero
+
+# Node Agent / volume backup
+kubectl get ds -n velero
+kubectl logs -n velero -l name=node-agent
+```
+
+`upgradeCRDs: false` — Job апгрейда CRD отключён (несовместимость образов kubectl/velero). CRD ставятся из chart `crds/` при install.
+
+## Апгрейд chart
+
+Один chart в git: `helm/charts/velero-8.6.0`. Path в `application.yaml`. Перед сменой версии — breaking changes values, совместимость `velero-plugin-for-aws` и CRDs.
