@@ -1,24 +1,25 @@
-# Имя ресурсов в кластере (StatefulSet, Pod, Service и т.д.)
 fullnameOverride: vault
+
 global:
   enabled: true
+  tlsDisable: false
   serverTelemetry:
     prometheusOperator: true
-  tlsDisable: false
+
 injector:
+  enabled: true
   image:
     repository: "hashicorp/vault-k8s"
     tag: "1.2.1"
   agentImage:
     repository: "hashicorp/vault"
-    tag: 1.14.0
+    tag: "1.14.0"
   certs:
     secretName: vault-injector-tls
     caBundle: ""
   webhook:
     annotations:
       cert-manager.io/inject-ca-from: vault/vault-injector-tls
-  enabled: true
   resources:
     limits:
       cpu: 260m
@@ -26,27 +27,34 @@ injector:
     requests:
       cpu: 260m
       memory: 256Mi
+
 server:
-  auditStorage:
-    enabled: true
-    mountPath: /vault/audit
-    size: 1Gi
-    storageClass: topolvm-provisioner
-  dataStorage:
-    enabled: true
-    mountPath: /vault/data
-    size: 1Gi
-    storageClass: topolvm-provisioner
   enabled: true
+  image:
+    repository: "hashicorp/vault"
+    tag: "1.14.0"
   extraEnvironmentVars:
     VAULT_CACERT: /vault/userconfig/vault-tls/ca.crt
   extraVolumes:
     - name: vault-tls
       type: secret
-  ha:
-    apiAddr: "https://$(VAULT_K8S_POD_NAME).vault-internal:8200"
+  dataStorage:
     enabled: true
+    mountPath: /vault/data
+    size: 1Gi
+    storageClass: topolvm-provisioner
+  auditStorage:
+    enabled: true
+    mountPath: /vault/audit
+    size: 1Gi
+    storageClass: topolvm-provisioner
+  ha:
+    enabled: true
+    replicas: 1
+    apiAddr: "https://$(VAULT_K8S_POD_NAME).vault-internal:8200"
     raft:
+      enabled: true
+      setNodeId: true
       config: >
         ui = true
         disable_mlock = true
@@ -75,20 +83,14 @@ server:
           }
         }
         service_registration "kubernetes" {}
-      enabled: true
-      setNodeId: true
-    replicas: 1
-  image:
-    repository: "hashicorp/vault"
-    tag: 1.14.0
   ingress:
+    enabled: true
     activeService: true
+    ingressClassName: nginx
     annotations:
       cert-manager.io/cluster-issuer: "lab-home-ca-issuer"
       nginx.ingress.kubernetes.io/ssl-redirect: "true"
       nginx.ingress.kubernetes.io/backend-protocol: HTTPS
-    enabled: true
-    ingressClassName: nginx
     hosts:
       - host: vault.lab-home.com
         paths: []
@@ -120,19 +122,16 @@ server:
       cpu: 250m
       memory: 256Mi
   updateStrategyType: OnDelete
+
 serverTelemetry:
+  serviceMonitor:
+    enabled: true
   prometheusRules:
     enabled: true
     rules: []
-  serviceMonitor:
-    enabled: true
+
 ui:
   enabled: true
   externalPort: 8200
   serviceNodePort: null
   serviceType: ClusterIP
-
-csi:
-  image:
-    repository: "hashicorp/vault-csi-provider"
-    tag: "1.4.0"
