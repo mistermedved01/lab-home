@@ -1,6 +1,4 @@
 ---
-# Отдельный S3-конфиг для backup-utility --s3config (как s3-cfg-backup на проде).
-# В lab-home credentials те же, что у gitlab-s3-cfg; на проде может быть другой endpoint/bucket.
 apiVersion: v1
 kind: Secret
 metadata:
