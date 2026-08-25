@@ -6,4 +6,3 @@ namespace: vault
 resources:
   - vault-tls.yaml
   - vault-injector-tls.yaml
-  - backup

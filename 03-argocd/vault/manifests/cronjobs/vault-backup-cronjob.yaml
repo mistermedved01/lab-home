@@ -6,8 +6,6 @@ metadata:
   labels:
     app.kubernetes.io/part-of: vault
     app.kubernetes.io/component: backup
-  annotations:
-    argocd.argoproj.io/sync-wave: "5"
 spec:
   schedule: "0 1 * * *"
   concurrencyPolicy: Forbid
@@ -28,8 +26,9 @@ spec:
               command: ["/bin/sh", "-ec"]
               args:
                 - |
-                  JSON=$(vault write auth/approle/login role_id=$VAULT_APPROLE_ROLE_ID secret_id=$VAULT_APPROLE_SECRET_ID -format=json)
-                  export VAULT_TOKEN=$(echo "$JSON" | grep -oE '"client_token"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"\([^"]*\)"$/\1/')
+                  JSON=$(vault write auth/approle/login role_id="$VAULT_APPROLE_ROLE_ID" secret_id="$VAULT_APPROLE_SECRET_ID" -format=json)
+                  VAULT_TOKEN=$(printf '%s' "$JSON" | sed -n 's/.*"client_token"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
+                  export VAULT_TOKEN
                   if [ -z "$VAULT_TOKEN" ]; then echo "[ERROR] VAULT_TOKEN empty, approle login failed."; exit 1; fi
                   vault operator raft snapshot save /share/vault-raft.snap
                   sha256sum /share/vault-raft.snap > /share/vault-raft.snap.sha256
@@ -57,7 +56,7 @@ spec:
                   sha256sum -c /share/vault-raft.snap.sha256
                   TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
                   TAG_TYPE=daily
-                  [ "$(date +%u)" -gt 6 ] && TAG_TYPE=weekly
+                  [ "$(date +%u)" = "7" ] && TAG_TYPE=weekly
                   [ "$(date +%d)" = "01" ] && TAG_TYPE=monthly
                   echo "[INFO] Tag: type=${TAG_TYPE}"
                   [ -f /certs/ca.crt ] && export AWS_CA_BUNDLE=/certs/ca.crt
