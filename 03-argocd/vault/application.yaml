@@ -1,5 +1,4 @@
 ---
-# ArgoCD Application для Vault
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -43,6 +42,7 @@ spec:
       allowEmpty: false
     syncOptions:
       - CreateNamespace=true
+      - ServerSideApply=true
       - RespectIgnoreDifferences=true
     retry:
       limit: 5
