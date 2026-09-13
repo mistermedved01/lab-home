@@ -55,7 +55,7 @@ data:
         image = "ubuntu:22.04"
 
         pull_policy = "always"
-        privileged = false
+        privileged = true
         poll_timeout = 600
 
         cpu_request = "100m"
