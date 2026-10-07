@@ -90,6 +90,14 @@ global:
   grafana:
     enabled: false
 
+  # MinIO API (minio-tenant-tls) подписан кластерным ЦС. Без него workhorse
+  # отклоняет HTTPS при загрузке LFS, artifacts и uploads.
+  certificates:
+    customCAs:
+      - configMap: kube-root-ca.crt
+        keys:
+          - ca.crt
+
 gitlab:
   upgradeCheck:
     enabled: false
