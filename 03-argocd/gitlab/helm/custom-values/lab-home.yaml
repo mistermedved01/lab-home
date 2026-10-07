@@ -90,8 +90,6 @@ global:
   grafana:
     enabled: false
 
-  # MinIO API (minio-tenant-tls) подписан кластерным ЦС. Без него workhorse
-  # отклоняет HTTPS при загрузке LFS, artifacts и uploads.
   certificates:
     customCAs:
       - configMap: kube-root-ca.crt
@@ -169,7 +167,7 @@ gitlab:
         restartPolicy: Never
         persistence:
           enabled: true
-          size: 2Gi
+          size: 4Gi
           storageClass: topolvm-provisioner
           useGenericEphemeralVolume: false
       objectStorage:
