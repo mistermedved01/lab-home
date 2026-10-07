@@ -160,7 +160,7 @@ gitlab:
       cron:
         enabled: true
         schedule: "0 2 * * *"
-        extraArgs: --skip artifacts
+        extraArgs: --skip artifacts --maximum-backups 5
         successfulJobsHistoryLimit: 5
         failedJobsHistoryLimit: 3
         backoffLimit: 2
