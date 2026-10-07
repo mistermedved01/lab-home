@@ -6,7 +6,7 @@
 # https://hub.docker.com/r/bitnami/kubectl/tags
 kubectl:
   image:
-    repository: docker.io/bitnami/kubectl
+    repository: soldevelo/kubectl
     tag: "latest"
 
 # Job upgrade-crds падает: контейнер velero не может выполнить /tmp/kubectl из init (разные образы).
