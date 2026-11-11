@@ -123,14 +123,14 @@ gitlab:
     maxReplicas: 1
     concurrency: 5
     memoryKiller:
-      maxRss: 900000
+      maxRss: 1800000
     resources:
       requests:
         cpu: 400m
-        memory: 512Mi
+        memory: 1G
       limits:
         cpu: "1"
-        memory: 1G
+        memory: 2G
   gitaly:
     replicas: 1
     persistence:
@@ -175,7 +175,7 @@ gitlab:
         restartPolicy: Never
         persistence:
           enabled: true
-          size: 4Gi
+          size: 10Gi
           storageClass: topolvm-provisioner
           useGenericEphemeralVolume: false
       objectStorage:
